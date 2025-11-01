@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 min-h-screen;
+  }
+}
+
+@layer components {
+  /* Glass Card Effect - Estilo Otoño */
+  .glass-card {
+    @apply bg-white/75 backdrop-blur-xl rounded-3xl shadow-lg border border-amber-200/30;
+  }
+  
+  .glass-card-dark {
+    @apply bg-amber-900/40 backdrop-blur-xl rounded-3xl shadow-lg border border-amber-200/20;
+  }
+
+  /* Botones con efecto glass */
+  .btn-glass {
+    @apply bg-white/80 backdrop-blur-md hover:bg-white/90 transition-all duration-300 rounded-2xl shadow-md border border-amber-200/40;
+  }
+
+  .btn-glass-primary {
+    @apply bg-gradient-to-r from-emerald-500/90 to-amber-500/90 backdrop-blur-md hover:from-emerald-600/95 hover:to-amber-600/95 text-white transition-all duration-300 rounded-2xl shadow-lg border border-amber-300/30;
+  }
+
+  /* Input con efecto glass */
+  .input-glass {
+    @apply bg-white/70 backdrop-blur-lg rounded-2xl border border-amber-200/40 focus:border-emerald-400/50 focus:ring-2 focus:ring-amber-400/30 transition-all duration-300;
+  }
+
+  /* Animaciones suaves */
+  .fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* View Transitions */
+@layer utilities {
+  /* Transición suave por defecto */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0.4s;
+    animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Fade con scale sutil */
+  ::view-transition-old(root) {
+    animation-name: fade-out-scale;
+  }
+
+  ::view-transition-new(root) {
+    animation-name: fade-in-scale;
+  }
+
+  @keyframes fade-out-scale {
+    from {
+      opacity: 1;
+      transform: scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+  }
+
+  @keyframes fade-in-scale {
+    from {
+      opacity: 0;
+      transform: scale(1.05);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+}
