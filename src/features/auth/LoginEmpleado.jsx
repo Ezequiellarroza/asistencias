@@ -1,33 +1,91 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Smartphone, ArrowRight, Loader2 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
 import { sanitizarTelefono, formatearTelefono, validarTelefono } from '../../utils/validators';
+import { useAuth } from '../../context/AuthContext';
 
 function LoginEmpleado() {
   const [telefono, setTelefono] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [loginSuccess, setLoginSuccess] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
+
+  // Navegar después de que todo se haya guardado
+  useEffect(() => {
+    if (loginSuccess) {
+      navigate('/empleado/dashboard');
+    }
+  }, [loginSuccess, navigate]);
 
   const handleChange = (e) => {
     const valor = e.target.value;
     const formateado = formatearTelefono(valor);
     setTelefono(formateado);
+    setError(''); // Limpiar error al escribir
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const telefonoLimpio = sanitizarTelefono(telefono);
     
-    if (validarTelefono(telefonoLimpio)) {
-      setLoading(true);
-      // TODO: Llamar a API de autenticación
-      setTimeout(() => {
-        // Por ahora simulamos que funciona
-        navigate('/empleado/preguntas', { state: { telefono: telefonoLimpio } });
-        setLoading(false);
-      }, 1000);
+    if (!validarTelefono(telefonoLimpio)) {
+      setError('Número de teléfono inválido');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    
+    try {
+      // Llamada real al backend
+      const response = await fetch('https://ezequiellarroza.com.ar/api/login.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ telefono: telefonoLimpio })
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        // Crear objeto empleado con los datos que vienen del backend
+        const empleado = {
+          id: data.data.empleado_id,
+          nombre: data.data.nombre,
+          apellido: data.data.apellido,
+          telefono: data.data.telefono
+        };
+        
+        // Guardar PRIMERO en localStorage
+        localStorage.setItem('empleado', JSON.stringify(empleado));
+        localStorage.setItem('oficina', JSON.stringify(data.data.oficina));
+        localStorage.setItem('jwt_token', data.data.jwt_token);
+        
+        // LUEGO setear en AuthContext
+        login({
+          id: data.data.empleado_id,
+          tipo: 'empleado',
+          nombre: data.data.nombre,
+          apellido: data.data.apellido,
+          telefono: data.data.telefono
+        });
+        
+        // Esperar un poco para asegurar que todo se guardó
+        setTimeout(() => {
+          setLoginSuccess(true);
+        }, 100);
+        
+      } else {
+        setError(data.message || data.mensaje || 'No se encontró el empleado con ese teléfono');
+      }
+    } catch (error) {
+      console.error('Error al hacer login:', error);
+      setError('Error de conexión con el servidor. Intenta nuevamente.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -71,6 +129,13 @@ function LoginEmpleado() {
                 Código de área + número (ej: 2494 123 4567)
               </p>
             </div>
+
+            {/* Mensaje de error */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
 
             <button
               type="submit"

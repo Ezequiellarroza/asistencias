@@ -1,71 +1,206 @@
-import { useState } from 'react';
+// src/hooks/useGeolocation.js
+// Hook personalizado para manejar geolocalización GPS
 
-/**
- * Hook personalizado para manejar la Geolocation API.
- * Proporciona el estado de la ubicación, el estado de carga y un manejador de errores,
- * además de una función para solicitar la ubicación actual.
- * * Basado en los requisitos de "Validación GPS" del documento de planificación.
- *
- */
-export const useGeolocation = () => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [location, setLocation] = useState(null);
+import { useState, useEffect, useCallback } from 'react';
+
+const useGeolocation = (options = {}) => {
+  const [location, setLocation] = useState({
+    latitud: null,
+    longitud: null,
+    accuracy: null,
+    timestamp: null
+  });
+  
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [permissionStatus, setPermissionStatus] = useState('prompt'); // 'granted', 'denied', 'prompt'
+
+  // Opciones por defecto para geolocalización
+  const defaultOptions = {
+    enableHighAccuracy: true,
+    timeout: 10000,
+    maximumAge: 0,
+    ...options
+  };
 
   /**
-   * Solicita la ubicación actual del usuario al navegador.
+   * Verificar el estado del permiso de geolocalización
    */
-  const requestLocation = () => {
-    setIsLoading(true);
-    setError(null);
-    setLocation(null);
-
-    if (!navigator.geolocation) {
-      setError("La geolocalización no es soportada por este navegador.");
-      setIsLoading(false);
-      return;
+  const checkPermissionStatus = useCallback(async () => {
+    if (!navigator.permissions) {
+      return 'unsupported';
     }
 
-    // Opciones para alta precisión, crucial para la validación de oficinas
-    const options = {
-      enableHighAccuracy: true,
-      timeout: 10000, // 10 segundos
-      maximumAge: 0,
-    };
+    try {
+      const result = await navigator.permissions.query({ name: 'geolocation' });
+      setPermissionStatus(result.state);
+      
+      // Escuchar cambios en el permiso
+      result.addEventListener('change', () => {
+        setPermissionStatus(result.state);
+      });
+      
+      return result.state;
+    } catch (err) {
+      console.error('Error checking permission:', err);
+      return 'unsupported';
+    }
+  }, []);
 
-    // Callback de éxito
-    const onSuccess = (position) => {
-      const { latitude, longitude } = position.coords;
-      setLocation({ latitude, longitude });
-      setIsLoading(false);
-    };
+  /**
+   * Obtener ubicación actual
+   */
+  const getLocation = useCallback(() => {
+    setLoading(true);
+    setError(null);
 
-    // Callback de error
-    const onError = (err) => {
-      // - Manejo de errores de permisos
-      let errorMessage = "Un error desconocido ocurrió.";
-      switch (err.code) {
-        case err.PERMISSION_DENIED:
-          errorMessage = "Permiso de geolocalización denegado.";
-          break;
-        case err.POSITION_UNAVAILABLE:
-          errorMessage = "Información de ubicación no disponible.";
-          break;
-        case err.TIMEOUT:
-          errorMessage = "La solicitud de geolocalización expiró.";
-          break;
-      }
-      setError(errorMessage);
-      setIsLoading(false);
-    };
+    if (!navigator.geolocation) {
+      const err = new Error('Geolocalización no soportada por el navegador');
+      setError(err);
+      setLoading(false);
+      return Promise.reject(err);
+    }
 
-    navigator.geolocation.getCurrentPosition(onSuccess, onError, options);
-  };
+    return new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const locationData = {
+            latitud: position.coords.latitude,
+            longitud: position.coords.longitude,
+            accuracy: position.coords.accuracy,
+            timestamp: position.timestamp
+          };
+          
+          setLocation(locationData);
+          setLoading(false);
+          resolve(locationData);
+        },
+        (err) => {
+          let errorMessage = 'Error al obtener ubicación';
+          
+          switch (err.code) {
+            case err.PERMISSION_DENIED:
+              errorMessage = 'Permiso de ubicación denegado. Por favor, habilita el GPS en la configuración.';
+              break;
+            case err.POSITION_UNAVAILABLE:
+              errorMessage = 'Información de ubicación no disponible';
+              break;
+            case err.TIMEOUT:
+              errorMessage = 'Tiempo de espera agotado al obtener ubicación';
+              break;
+            default:
+              errorMessage = err.message || 'Error desconocido al obtener ubicación';
+          }
+          
+          const error = new Error(errorMessage);
+          error.code = err.code;
+          
+          setError(error);
+          setLoading(false);
+          reject(error);
+        },
+        defaultOptions
+      );
+    });
+  }, [defaultOptions]);
 
-  return { 
-    location,       // Objeto con { latitude, longitude } o null
-    isLoading,      // boolean: true mientras busca
-    error,          // string con el mensaje de error o null
-    requestLocation // Función para iniciar la solicitud
+  /**
+   * Observar ubicación en tiempo real (watchPosition)
+   */
+  const watchLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setError(new Error('Geolocalización no soportada'));
+      return null;
+    }
+
+    setLoading(true);
+
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const locationData = {
+          latitud: position.coords.latitude,
+          longitud: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+          timestamp: position.timestamp
+        };
+        
+        setLocation(locationData);
+        setLoading(false);
+        setError(null);
+      },
+      (err) => {
+        setError(new Error(err.message));
+        setLoading(false);
+      },
+      defaultOptions
+    );
+
+    return watchId;
+  }, [defaultOptions]);
+
+  /**
+   * Detener observación de ubicación
+   */
+  const clearWatch = useCallback((watchId) => {
+    if (watchId && navigator.geolocation) {
+      navigator.geolocation.clearWatch(watchId);
+    }
+  }, []);
+
+  /**
+   * Calcular distancia entre dos puntos (en metros)
+   * Fórmula de Haversine
+   */
+  const calcularDistancia = useCallback((lat1, lon1, lat2, lon2) => {
+    const R = 6371e3; // Radio de la Tierra en metros
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+    return R * c; // Distancia en metros
+  }, []);
+
+  /**
+   * Verificar si está dentro del radio permitido
+   */
+  const estaEnRango = useCallback((oficinaLat, oficinaLng, radio) => {
+    if (!location.latitud || !location.longitud) {
+      return false;
+    }
+
+    const distancia = calcularDistancia(
+      location.latitud, 
+      location.longitud, 
+      oficinaLat, 
+      oficinaLng
+    );
+
+    return distancia <= radio;
+  }, [location, calcularDistancia]);
+
+  // Verificar permiso al montar el componente
+  useEffect(() => {
+    checkPermissionStatus();
+  }, [checkPermissionStatus]);
+
+  return {
+    location,
+    error,
+    loading,
+    permissionStatus,
+    getLocation,
+    watchLocation,
+    clearWatch,
+    calcularDistancia,
+    estaEnRango,
+    checkPermissionStatus
   };
 };
+
+export default useGeolocation;

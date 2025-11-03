@@ -6,7 +6,6 @@ import ProtectedRoute from './components/ProtectedRoute';
 // Auth
 import LoginEmpleado from './features/auth/LoginEmpleado';
 import LoginAdmin from './features/auth/LoginAdmin';
-import PreguntasIA from './features/auth/PreguntasIA';
 
 // Empleado
 import EmpleadoDashboard from './features/empleado/Dashboard';
@@ -36,9 +35,6 @@ function App() {
               </PublicRoute>
             }
           />
-
-          {/* Ruta intermedia - Preguntas IA */}
-          <Route path="/empleado/preguntas" element={<PreguntasIA />} />
 
           {/* Rutas protegidas - Empleado */}
           <Route

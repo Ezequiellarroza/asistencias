@@ -1,0 +1,173 @@
+// src/services/authService.js
+// Servicio de autenticación conectado al backend PHP
+
+import api from './api.js';
+
+class AuthService {
+  /**
+   * Login de empleado por teléfono
+   * @param {string} telefono - Número de teléfono del empleado
+   * @returns {Promise<Object>} - Datos del empleado y oficina
+   */
+  async loginEmpleado(telefono) {
+    try {
+      const response = await api.post('/login.php', { telefono });
+      
+      if (response.success && response.data) {
+        // Guardar datos del empleado en localStorage
+        localStorage.setItem('empleado', JSON.stringify(response.data.empleado));
+        localStorage.setItem('oficina', JSON.stringify(response.data.oficina));
+        
+        return response.data;
+      }
+      
+      throw new Error(response.mensaje || 'Error en el login');
+    } catch (error) {
+      console.error('Error en loginEmpleado:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generar preguntas de IA para verificación
+   * @param {number} empleadoId - ID del empleado
+   * @returns {Promise<Object>} - Preguntas y session token
+   */
+  async generarPreguntas(empleadoId) {
+    try {
+      const response = await api.post('/generar-preguntas.php', {
+        empleado_id: empleadoId
+      });
+      
+      if (response.success && response.data) {
+        // Guardar session_token temporalmente
+        sessionStorage.setItem('session_token', response.data.session_token);
+        
+        return response.data;
+      }
+      
+      throw new Error(response.mensaje || 'Error al generar preguntas');
+    } catch (error) {
+      console.error('Error en generarPreguntas:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Verificar respuestas de IA
+   * @param {string} sessionToken - Token de la sesión de preguntas
+   * @param {Array} respuestas - Array de objetos {id, respuesta}
+   * @returns {Promise<Object>} - JWT token si las respuestas son correctas
+   */
+  async verificarRespuestas(sessionToken, respuestas) {
+    try {
+      const response = await api.post('/verificar-respuesta.php', {
+        session_token: sessionToken,
+        respuestas: respuestas
+      });
+      
+      if (response.success && response.data && response.data.token) {
+        // Guardar JWT token
+        api.setToken(response.data.token);
+        
+        // Limpiar session token temporal
+        sessionStorage.removeItem('session_token');
+        
+        return response.data;
+      }
+      
+      throw new Error(response.mensaje || 'Error al verificar respuestas');
+    } catch (error) {
+      console.error('Error en verificarRespuestas:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Login de administrador
+   * @param {string} username - Usuario administrador
+   * @param {string} password - Contraseña
+   * @returns {Promise<Object>} - Datos del administrador
+   */
+  async loginAdmin(username, password) {
+    try {
+      // TODO: Implementar endpoint de login admin en el backend
+      const response = await api.post('/login-admin.php', {
+        username,
+        password
+      });
+      
+      if (response.success && response.data && response.data.token) {
+        api.setToken(response.data.token);
+        localStorage.setItem('user_type', 'admin');
+        
+        return response.data;
+      }
+      
+      throw new Error(response.mensaje || 'Error en el login de administrador');
+    } catch (error) {
+      console.error('Error en loginAdmin:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Verificar si el usuario está autenticado
+   * @returns {boolean}
+   */
+  isAuthenticated() {
+    const token = api.getToken();
+    return !!token;
+  }
+
+  /**
+   * Obtener datos del empleado actual
+   * @returns {Object|null}
+   */
+  getCurrentEmpleado() {
+    try {
+      const empleadoStr = localStorage.getItem('empleado');
+      return empleadoStr ? JSON.parse(empleadoStr) : null;
+    } catch (error) {
+      console.error('Error al obtener empleado:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Obtener datos de la oficina actual
+   * @returns {Object|null}
+   */
+  getCurrentOficina() {
+    try {
+      const oficinaStr = localStorage.getItem('oficina');
+      return oficinaStr ? JSON.parse(oficinaStr) : null;
+    } catch (error) {
+      console.error('Error al obtener oficina:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Logout - Limpiar toda la autenticación
+   */
+  logout() {
+    api.clearAuth();
+    localStorage.removeItem('empleado');
+    localStorage.removeItem('oficina');
+    localStorage.removeItem('user_type');
+    sessionStorage.removeItem('session_token');
+  }
+
+  /**
+   * Obtener tipo de usuario (empleado o admin)
+   * @returns {string|null}
+   */
+  getUserType() {
+    return localStorage.getItem('user_type') || 'empleado';
+  }
+}
+
+// Exportar instancia singleton
+const authService = new AuthService();
+export default authService;
