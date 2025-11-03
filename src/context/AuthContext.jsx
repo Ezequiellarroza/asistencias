@@ -8,7 +8,17 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     // Verificar si hay una sesión guardada en localStorage
-    // Primero intentar con 'user' (formato nuevo)
+    // IMPORTANTE: Solo considerar autenticado si TAMBIÉN hay token JWT
+    const jwtToken = localStorage.getItem('jwt_token');
+    
+    // Si no hay token, limpiar todo y no autenticar
+    if (!jwtToken) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+    
+    // Si hay token, intentar cargar el usuario
     let savedUser = localStorage.getItem('user');
     
     if (savedUser) {
@@ -16,9 +26,8 @@ export const AuthProvider = ({ children }) => {
     } else {
       // Si no existe 'user', intentar construirlo desde 'empleado' + 'jwt_token'
       const empleado = localStorage.getItem('empleado');
-      const jwtToken = localStorage.getItem('jwt_token');
       
-      if (empleado && jwtToken) {
+      if (empleado) {
         const empleadoData = JSON.parse(empleado);
         const userData = {
           id: empleadoData.id,

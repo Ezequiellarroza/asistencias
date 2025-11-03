@@ -21,18 +21,20 @@ function Dashboard() {
     // Cargar datos del localStorage
     const empleadoData = localStorage.getItem('empleado');
     const oficinaData = localStorage.getItem('oficina');
-    const token = localStorage.getItem('jwt_token');
 
-    if (!token || !empleadoData || !oficinaData) {
-      navigate('/');
-      return;
+    // Si llegamos acá, ProtectedRoute ya validó que user existe
+    // Solo necesitamos cargar los datos adicionales
+    if (empleadoData) {
+      setEmpleado(JSON.parse(empleadoData));
+    }
+    
+    if (oficinaData) {
+      setOficina(JSON.parse(oficinaData));
     }
 
-    setEmpleado(JSON.parse(empleadoData));
-    setOficina(JSON.parse(oficinaData));
-
     cargarEstado();
-  }, [navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // ← Array vacío - solo se ejecuta una vez al montar el componente
 
   const cargarEstado = async () => {
     const token = localStorage.getItem('jwt_token');
