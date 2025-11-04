@@ -87,24 +87,25 @@ class AuthService {
    * Login de administrador
    * @param {string} username - Usuario administrador
    * @param {string} password - Contraseña
-   * @returns {Promise<Object>} - Datos del administrador
+   * @returns {Promise<Object>} - Datos del administrador y JWT token
    */
   async loginAdmin(username, password) {
     try {
-      // TODO: Implementar endpoint de login admin en el backend
-      const response = await api.post('/login-admin.php', {
+      // Endpoint correcto del backend
+      const response = await api.post('/admin/login.php', {
         username,
         password
       });
       
-      if (response.success && response.data && response.data.token) {
-        api.setToken(response.data.token);
-        localStorage.setItem('user_type', 'admin');
+      if (response.success && response.data && response.data.jwt_token) {
+        // Guardar JWT token
+        api.setToken(response.data.jwt_token);
         
+        // Retornar datos del admin
         return response.data;
       }
       
-      throw new Error(response.mensaje || 'Error en el login de administrador');
+      throw new Error(response.message || response.mensaje || 'Error en el login de administrador');
     } catch (error) {
       console.error('Error en loginAdmin:', error);
       throw error;
@@ -155,16 +156,27 @@ class AuthService {
     api.clearAuth();
     localStorage.removeItem('empleado');
     localStorage.removeItem('oficina');
-    localStorage.removeItem('user_type');
+    localStorage.removeItem('user');
     sessionStorage.removeItem('session_token');
   }
 
   /**
-   * Obtener tipo de usuario (empleado o admin)
+   * Obtener tipo de usuario desde el token JWT o localStorage
    * @returns {string|null}
    */
   getUserType() {
-    return localStorage.getItem('user_type') || 'empleado';
+    // Intentar obtener desde el user en localStorage
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        return user.tipo || 'empleado';
+      }
+    } catch (error) {
+      console.error('Error al obtener tipo de usuario:', error);
+    }
+    
+    return null;
   }
 }
 

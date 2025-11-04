@@ -2,7 +2,8 @@
 // Configuración de API para conectar con el backend PHP
 
 const API_CONFIG = {
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://ezequiellarroza.com.ar/api',
+  // Hardcodeado porque Vite no está leyendo el .env en build
+  baseURL: 'https://ezequiellarroza.com.ar/api',
   timeout: 30000, // 30 segundos para llamadas a IA
   headers: {
     'Content-Type': 'application/json',
