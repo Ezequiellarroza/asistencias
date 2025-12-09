@@ -11,11 +11,19 @@ class AuthService {
    */
   async loginEmpleado(telefono) {
     try {
-      const response = await api.post('/login.php', { telefono });
+      const response = await api.post('/empleado/login.php', { telefono });
       
       if (response.success && response.data) {
+        // Crear objeto empleado con los datos
+        const empleado = {
+          id: response.data.empleado_id,
+          nombre: response.data.nombre,
+          apellido: response.data.apellido,
+          telefono: response.data.telefono
+        };
+        
         // Guardar datos del empleado en localStorage
-        localStorage.setItem('empleado', JSON.stringify(response.data.empleado));
+        localStorage.setItem('empleado', JSON.stringify(empleado));
         localStorage.setItem('oficina', JSON.stringify(response.data.oficina));
         
         return response.data;
@@ -35,7 +43,7 @@ class AuthService {
    */
   async generarPreguntas(empleadoId) {
     try {
-      const response = await api.post('/generar-preguntas.php', {
+      const response = await api.post('/empleado/generar-preguntas.php', {
         empleado_id: empleadoId
       });
       
@@ -61,7 +69,7 @@ class AuthService {
    */
   async verificarRespuestas(sessionToken, respuestas) {
     try {
-      const response = await api.post('/verificar-respuesta.php', {
+      const response = await api.post('/empleado/verificar-respuesta.php', {
         session_token: sessionToken,
         respuestas: respuestas
       });
@@ -91,7 +99,6 @@ class AuthService {
    */
   async loginAdmin(username, password) {
     try {
-      // Endpoint correcto del backend
       const response = await api.post('/admin/login.php', {
         username,
         password
@@ -101,7 +108,6 @@ class AuthService {
         // Guardar JWT token
         api.setToken(response.data.jwt_token);
         
-        // Retornar datos del admin
         return response.data;
       }
       
@@ -165,7 +171,6 @@ class AuthService {
    * @returns {string|null}
    */
   getUserType() {
-    // Intentar obtener desde el user en localStorage
     try {
       const userStr = localStorage.getItem('user');
       if (userStr) {

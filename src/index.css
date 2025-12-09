@@ -47,6 +47,31 @@
       transform: translateY(0);
     }
   }
+
+  /* 🔥 NUEVAS ANIMACIONES PARA MODAL */
+  .animate-fadeIn {
+    animation: backdropFadeIn 0.2s ease-out;
+  }
+
+  .animate-scaleIn {
+    animation: modalScaleIn 0.3s ease-out;
+  }
+
+  @keyframes backdropFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes modalScaleIn {
+    from { 
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to { 
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
 }
 
 /* View Transitions */
@@ -88,4 +113,37 @@
       transform: scale(1);
     }
   }
+}
+
+/* ============================================
+   ANIMACIONES PARA TOAST
+   ============================================ */
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes progress {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}
+
+.animate-progress {
+  animation: progress linear;
+  animation-fill-mode: forwards;
 }

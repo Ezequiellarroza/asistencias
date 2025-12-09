@@ -3,7 +3,7 @@
 
 const API_CONFIG = {
   // Hardcodeado porque Vite no está leyendo el .env en build
-  baseURL: 'https://ezequiellarroza.com.ar/api',
+  baseURL: 'https://ezequiellarroza.com.ar/valle/api',
   timeout: 30000, // 30 segundos para llamadas a IA
   headers: {
     'Content-Type': 'application/json',
@@ -72,6 +72,21 @@ class ApiService {
 
       clearTimeout(timeoutId);
 
+      // Detectar error 401 específicamente
+      if (response.status === 401) {
+        // Limpiar TODO el localStorage
+        localStorage.removeItem('jwt_token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('empleado');
+        localStorage.removeItem('oficina');
+        
+        // Disparar evento personalizado para que App.jsx lo capture
+        window.dispatchEvent(new Event('unauthorized'));
+        
+        // Lanzar error
+        throw new Error('No autenticado');
+      }
+
       // Leer el texto de respuesta primero
       const text = await response.text();
       
@@ -127,6 +142,17 @@ class ApiService {
   async put(endpoint, data = {}) {
     return this.request(endpoint, {
       method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  /**
+   * PATCH request
+   * Usado para actualizaciones parciales (ej: cambiar contraseña)
+   */
+  async patch(endpoint, data = {}) {
+    return this.request(endpoint, {
+      method: 'PATCH',
       body: JSON.stringify(data),
     });
   }

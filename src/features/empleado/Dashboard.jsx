@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Clock, MapPin, CheckCircle, XCircle, Loader2, Calendar } from 'lucide-react';
+import { LogOut, Clock, MapPin, CheckCircle, XCircle, Loader2, CheckSquare } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import useGeolocation from '../../hooks/useGeolocation';
+import marcacionService from '../../services/marcacionService';
+import ModalSeleccionOficina from '../../components/ui/ModalSeleccionOficina';
 
 function Dashboard() {
   const [estado, setEstado] = useState(null);
@@ -13,6 +15,10 @@ function Dashboard() {
   const [empleado, setEmpleado] = useState(null);
   const [oficina, setOficina] = useState(null);
   
+  // Estados para el modal de selección de oficina
+  const [modalAbierto, setModalAbierto] = useState(false);
+  const [tipoMarcacion, setTipoMarcacion] = useState(null); // 'entrada' o 'salida'
+  
   const navigate = useNavigate();
   const { logout } = useAuth();
   const { location, error: gpsError, loading: gpsLoading, getLocation } = useGeolocation();
@@ -22,8 +28,6 @@ function Dashboard() {
     const empleadoData = localStorage.getItem('empleado');
     const oficinaData = localStorage.getItem('oficina');
 
-    // Si llegamos acá, ProtectedRoute ya validó que user existe
-    // Solo necesitamos cargar los datos adicionales
     if (empleadoData) {
       setEmpleado(JSON.parse(empleadoData));
     }
@@ -33,109 +37,104 @@ function Dashboard() {
     }
 
     cargarEstado();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // ← Array vacío - solo se ejecuta una vez al montar el componente
+  }, []);
 
   const cargarEstado = async () => {
-    const token = localStorage.getItem('jwt_token');
-    
     try {
-      const response = await fetch('https://ezequiellarroza.com.ar/api/estado.php', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        }
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setEstado(data.data);
-      }
+      const data = await marcacionService.obtenerEstado();
+      setEstado(data);
     } catch (err) {
       console.error('Error al cargar estado:', err);
+      if (err.message === 'No autenticado') {
+        setError('Tu sesión ha expirado. Redirigiendo al login...');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const calcularDistancia = (lat1, lon1, lat2, lon2) => {
-    const R = 6371e3; // Radio de la Tierra en metros
-    const φ1 = lat1 * Math.PI / 180;
-    const φ2 = lat2 * Math.PI / 180;
-    const Δφ = (lat2 - lat1) * Math.PI / 180;
-    const Δλ = (lon2 - lon1) * Math.PI / 180;
-
-    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-            Math.cos(φ1) * Math.cos(φ2) *
-            Math.sin(Δλ/2) * Math.sin(Δλ/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
-    return R * c; // Distancia en metros
-  };
-
   const handleMarcar = async (tipo) => {
-    setSubmitting(true);
-    setError('');
-    setSuccess('');
+  setSubmitting(true);
+  setError('');
+  setSuccess('');
 
+  try {
+    // Intentar obtener ubicación, pero no bloquear si falla
     try {
-      // Obtener ubicación GPS actual
-      const ubicacion = await getLocation();
-
-      if (!ubicacion || !ubicacion.latitud || !ubicacion.longitud) {
-        throw new Error('No se pudo obtener la ubicación GPS');
-      }
-
-      // Verificar que estamos en rango (validación en el frontend también)
-      if (oficina) {
-        const distancia = calcularDistancia(
-          ubicacion.latitud,
-          ubicacion.longitud,
-          parseFloat(oficina.latitud),
-          parseFloat(oficina.longitud)
-        );
-
-        // NO bloqueamos la marcación, solo guardamos la distancia
-        // El backend generará alerta automáticamente si está fuera de rango
-      }
-
-      // Llamar al backend para marcar
-      const token = localStorage.getItem('jwt_token');
-      const endpoint = tipo === 'entrada' ? '/marcar-entrada.php' : '/marcar-salida.php';
-      
-      const response = await fetch(`https://ezequiellarroza.com.ar/api${endpoint}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          latitud: ubicacion.latitud,
-          longitud: ubicacion.longitud
-        })
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setSuccess(data.mensaje || `${tipo === 'entrada' ? 'Entrada' : 'Salida'} registrada exitosamente`);
-        // Recargar estado
-        await cargarEstado();
-      } else {
-        throw new Error(data.mensaje || 'Error al registrar marcación');
-      }
-    } catch (err) {
-      console.error('Error al marcar:', err);
-      setError(err.message || 'Error al registrar marcación');
-    } finally {
-      setSubmitting(false);
+      await getLocation();
+    } catch (gpsErr) {
+      console.warn('No se pudo obtener GPS:', gpsErr.message);
+      // Continuar sin GPS - se generará alerta en el backend
     }
-  };
+
+    // Abrir modal aunque no haya GPS
+    setTipoMarcacion(tipo);
+    setModalAbierto(true);
+
+  } catch (err) {
+    console.error('Error inesperado:', err);
+    setError(err.message || 'Error inesperado');
+  } finally {
+    setSubmitting(false);
+  }
+};
+  const handleConfirmarMarcacion = async (oficinaId) => {
+  setSubmitting(true);
+  setModalAbierto(false);
+
+  try {
+    // Intentar obtener ubicación actualizada, pero no bloquear si falla
+    let ubicacionActual = { latitud: null, longitud: null };
+    let motivoSinGPS = null;
+    
+    try {
+      const gps = await getLocation();
+      if (gps && gps.latitud && gps.longitud) {
+        ubicacionActual = gps;
+      }
+    } catch (gpsErr) {
+      console.warn('No se pudo obtener GPS:', gpsErr.message);
+      motivoSinGPS = gpsErr.message;
+    }
+    
+    let data;
+    if (tipoMarcacion === 'entrada') {
+      data = await marcacionService.marcarEntrada(
+        ubicacionActual.latitud, 
+        ubicacionActual.longitud,
+        oficinaId,
+        motivoSinGPS
+      );
+    } else {
+      data = await marcacionService.marcarSalida(
+        ubicacionActual.latitud, 
+        ubicacionActual.longitud,
+        oficinaId,
+        motivoSinGPS
+      );
+    }
+
+    // Mostrar mensaje con advertencia si no hubo GPS
+    let mensaje = data.mensaje || `${tipoMarcacion === 'entrada' ? 'Entrada' : 'Salida'} registrada exitosamente`;
+    if (!ubicacionActual.latitud) {
+      mensaje += ' (sin ubicación GPS)';
+    }
+    setSuccess(mensaje);
+    await cargarEstado();
+
+  } catch (err) {
+    console.error('Error al marcar:', err);
+    if (err.message === 'No autenticado') {
+      setError('Tu sesión ha expirado. Redirigiendo al login...');
+    } else {
+      setError(err.message || 'Error al registrar marcación');
+    }
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   const handleLogout = () => {
-    // Usar el método logout del AuthContext que limpia todo correctamente
     logout();
     navigate('/');
   };
@@ -276,17 +275,29 @@ function Dashboard() {
           </button>
         </div>
 
-        {/* Botón de historial */}
-        <button
-          onClick={() => navigate('/empleado/historial')}
-          className="glass-card p-4 w-full hover:shadow-lg transition-all"
-        >
-          <div className="flex items-center justify-center gap-2 text-gray-700">
-            <Calendar className="w-5 h-5" />
-            <span className="font-medium">Ver Historial</span>
-          </div>
-        </button>
+        {/* Botón de Tareas (centrado) */}
+        <div className="max-w-md mx-auto">
+          <button
+            onClick={() => navigate('/empleado/tareas')}
+            className="glass-card p-4 hover:shadow-lg transition-all w-full"
+          >
+            <div className="flex items-center justify-center gap-2 text-gray-700">
+              <CheckSquare className="w-5 h-5" />
+              <span className="font-medium">Mis Tareas</span>
+            </div>
+          </button>
+        </div>
       </div>
+
+      {/* Modal de Selección de Oficina */}
+      <ModalSeleccionOficina
+        isOpen={modalAbierto}
+        onClose={() => setModalAbierto(false)}
+        tipo={tipoMarcacion}
+        latitud={location.latitud}
+        longitud={location.longitud}
+        onConfirmar={handleConfirmarMarcacion}
+      />
     </div>
   );
 }

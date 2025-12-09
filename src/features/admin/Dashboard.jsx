@@ -10,7 +10,11 @@ import {
   Clock,
   AlertTriangle,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  Bell,
+  CheckSquare,
+  Briefcase,
+  Home
 } from 'lucide-react';
 import adminService from '../../services/adminService';
 
@@ -32,37 +36,36 @@ function AdminDashboard() {
       setEstadisticas(data);
     } catch (err) {
       console.error('Error al cargar estadísticas:', err);
-      setError(err.message || 'Error al cargar las estadísticas');
+      if (err.message === 'No autenticado') {
+        setError('Tu sesión ha expirado. Redirigiendo al login...');
+      } else {
+        setError(err.message || 'Error al cargar las estadísticas');
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  // Cargar al montar
   useEffect(() => {
     cargarEstadisticas();
   }, []);
 
-  // Refrescar datos
   const handleRefresh = () => {
     setRefreshing(true);
     cargarEstadisticas();
   };
 
-  // Obtener color del icono según tipo de alerta
-  const getAlertColor = (tipo) => {
-    const colors = {
-      'gps_fuera_rango': 'text-orange-600',
-      'doble_entrada': 'text-yellow-600',
-      'salida_sin_entrada': 'text-red-600',
-      'turno_largo': 'text-purple-600',
-      'dispositivo_compartido': 'text-blue-600'
-    };
-    return colors[tipo] || 'text-gray-600';
+  const handleNavigateWithTransition = (path) => {
+    if (document.startViewTransition) {
+      document.startViewTransition(() => {
+        navigate(path);
+      });
+    } else {
+      navigate(path);
+    }
   };
 
-  // Loading state
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -74,7 +77,6 @@ function AdminDashboard() {
     );
   }
 
-  // Error state
   if (error && !estadisticas) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
@@ -82,12 +84,11 @@ function AdminDashboard() {
           <AlertTriangle className="w-12 h-12 text-red-600 mx-auto mb-4" />
           <h2 className="text-xl font-bold text-gray-800 mb-2">Error al cargar</h2>
           <p className="text-gray-600 mb-4">{error}</p>
-          <button
-            onClick={cargarEstadisticas}
-            className="btn-glass-primary px-6 py-2"
-          >
-            Reintentar
-          </button>
+          {error !== 'Tu sesión ha expirado. Redirigiendo al login...' && (
+            <button onClick={cargarEstadisticas} className="btn-glass-primary px-6 py-2">
+              Reintentar
+            </button>
+          )}
         </div>
       </div>
     );
@@ -99,9 +100,7 @@ function AdminDashboard() {
         {/* Header */}
         <div className="glass-card p-6 mb-6 flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">
-              Panel de Administración
-            </h1>
+            <h1 className="text-2xl font-bold text-gray-800">Panel de Administración</h1>
             <p className="text-sm text-gray-600">
               Usuario: {user?.username} • {estadisticas?.timestamp}
             </p>
@@ -115,10 +114,7 @@ function AdminDashboard() {
               <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
               Actualizar
             </button>
-            <button
-              onClick={logout}
-              className="btn-glass px-4 py-2 flex items-center gap-2 text-red-600"
-            >
+            <button onClick={logout} className="btn-glass px-4 py-2 flex items-center gap-2 text-red-600">
               <LogOut className="w-4 h-4" />
               Salir
             </button>
@@ -127,161 +123,121 @@ function AdminDashboard() {
 
         {/* Cards de estadísticas */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="glass-card p-6">
+          
+          <button
+            onClick={() => handleNavigateWithTransition('/admin/empleados')}
+            className="glass-card p-6 hover:scale-105 transition-transform duration-200 text-left"
+          >
             <Users className="w-8 h-8 text-emerald-600 mb-2" />
             <h3 className="text-2xl font-bold text-gray-800">
               {estadisticas?.empleados?.total_activos || 0}
             </h3>
-            <p className="text-sm text-gray-600">Empleados Activos</p>
-          </div>
+            <p className="text-sm text-gray-600">Gestión de Empleados</p>
+          </button>
 
-          <div className="glass-card p-6">
+          <button
+            onClick={() => handleNavigateWithTransition('/admin/empleados/presentes')}
+            className="glass-card p-6 hover:scale-105 transition-transform duration-200 text-left"
+          >
             <Clock className="w-8 h-8 text-amber-600 mb-2" />
             <h3 className="text-2xl font-bold text-gray-800">
               {estadisticas?.empleados?.presentes_hoy || 0}
             </h3>
             <p className="text-sm text-gray-600">Presentes Hoy</p>
-          </div>
+          </button>
 
-          <div className="glass-card p-6">
+          <button
+            onClick={() => handleNavigateWithTransition('/admin/oficinas')}
+            className="glass-card p-6 hover:scale-105 transition-transform duration-200 text-left"
+          >
             <MapPin className="w-8 h-8 text-blue-600 mb-2" />
             <h3 className="text-2xl font-bold text-gray-800">
               {estadisticas?.oficinas?.total_activas || 0}
             </h3>
             <p className="text-sm text-gray-600">Oficinas</p>
-          </div>
+          </button>
 
-          <div className="glass-card p-6">
-            <FileText className="w-8 h-8 text-purple-600 mb-2" />
+          <button
+            onClick={() => handleNavigateWithTransition('/admin/notificaciones')}
+            className="glass-card p-6 hover:scale-105 transition-transform duration-200 text-left"
+          >
+            <Bell className="w-8 h-8 text-purple-600 mb-2" />
             <h3 className="text-2xl font-bold text-gray-800">
-              {estadisticas?.marcaciones?.total_hoy || 0}
+              {estadisticas?.alertas?.total_pendientes || 0}
             </h3>
-            <p className="text-sm text-gray-600">Marcaciones Hoy</p>
-          </div>
+            <p className="text-sm text-gray-600">Notificaciones</p>
+          </button>
         </div>
-
-        {/* Alertas Pendientes */}
-        {estadisticas?.alertas?.total_pendientes > 0 && (
-          <div className="glass-card p-6 mb-6">
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="w-6 h-6 text-red-600" />
-                <h2 className="text-xl font-bold text-gray-800">
-                  Alertas Pendientes ({estadisticas.alertas.total_pendientes})
-                </h2>
-              </div>
-              <button
-                onClick={() => navigate('/admin/alertas')}
-                className="btn-glass-primary px-4 py-2 text-sm"
-              >
-                Ver todas
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              {estadisticas?.alertas?.ultimas_alertas?.map((alerta) => (
-                <div
-                  key={alerta.id}
-                  className="bg-white bg-opacity-50 rounded-lg p-4 flex items-start gap-3 hover:bg-opacity-70 transition-colors cursor-pointer"
-                  onClick={() => navigate('/admin/alertas')}
-                >
-                  <AlertTriangle className={`w-5 h-5 ${getAlertColor(alerta.tipo)} flex-shrink-0 mt-0.5`} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-800">
-                      {alerta.empleado_nombre_completo}
-                    </p>
-                    <p className="text-sm text-gray-600 truncate">
-                      {alerta.mensaje}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {new Date(alerta.creado_en).toLocaleString('es-AR')}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Menú de acciones */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          
           <button 
-            onClick={() => navigate('/admin/alertas')}
+            onClick={() => handleNavigateWithTransition('/admin/alertas')}
             className="glass-card p-8 hover:scale-105 transition-transform duration-200 text-left"
           >
             <AlertTriangle className="w-10 h-10 text-red-600 mb-4" />
-            <h3 className="text-xl font-bold text-gray-800 mb-2">
-              Alertas
-            </h3>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">Alertas</h3>
             <p className="text-sm text-gray-600">
-              {estadisticas?.alertas?.total_pendientes || 0} alertas pendientes
+              {estadisticas?.alertas?.total_pendientes > 0 
+                ? `${estadisticas.alertas.total_pendientes} alertas pendientes`
+                : 'No hay alertas pendientes'
+              }
             </p>
           </button>
 
           <button 
-            disabled
-            className="glass-card p-8 opacity-50 cursor-not-allowed text-left"
+            onClick={() => handleNavigateWithTransition('/admin/departamentos')}
+            className="glass-card p-8 hover:scale-105 transition-transform duration-200 text-left"
           >
-            <Users className="w-10 h-10 text-emerald-600 mb-4" />
-            <h3 className="text-xl font-bold text-gray-800 mb-2">
-              Gestión de Empleados
-            </h3>
-            <p className="text-sm text-gray-600">
-              Próximamente
-            </p>
+            <Briefcase className="w-10 h-10 text-indigo-600 mb-4" />
+            <h3 className="text-xl font-bold text-gray-800 mb-2">Departamentos</h3>
+            <p className="text-sm text-gray-600">Gestionar departamentos y áreas</p>
           </button>
 
           <button 
-            disabled
-            className="glass-card p-8 opacity-50 cursor-not-allowed text-left"
+            onClick={() => handleNavigateWithTransition('/admin/espacios')}
+            className="glass-card p-8 hover:scale-105 transition-transform duration-200 text-left"
           >
-            <FileText className="w-10 h-10 text-amber-600 mb-4" />
-            <h3 className="text-xl font-bold text-gray-800 mb-2">
-              Reportes
-            </h3>
-            <p className="text-sm text-gray-600">
-              Próximamente
-            </p>
+            <Home className="w-10 h-10 text-teal-600 mb-4" />
+            <h3 className="text-xl font-bold text-gray-800 mb-2">Espacios</h3>
+            <p className="text-sm text-gray-600">Gestionar espacios y ubicaciones</p>
           </button>
 
           <button 
-            disabled
-            className="glass-card p-8 opacity-50 cursor-not-allowed text-left"
+            onClick={() => handleNavigateWithTransition('/admin/tareas')}
+            className="glass-card p-8 hover:scale-105 transition-transform duration-200 text-left"
           >
-            <MapPin className="w-10 h-10 text-blue-600 mb-4" />
-            <h3 className="text-xl font-bold text-gray-800 mb-2">
-              Oficinas
-            </h3>
-            <p className="text-sm text-gray-600">
-              Próximamente
-            </p>
+            <CheckSquare className="w-10 h-10 text-cyan-600 mb-4" />
+            <h3 className="text-xl font-bold text-gray-800 mb-2">Tareas</h3>
+            <p className="text-sm text-gray-600">Gestionar tareas y asignaciones</p>
           </button>
 
           <button 
-            disabled
-            className="glass-card p-8 opacity-50 cursor-not-allowed text-left"
-          >
-            <Clock className="w-10 h-10 text-purple-600 mb-4" />
-            <h3 className="text-xl font-bold text-gray-800 mb-2">
-              Marcación Manual
-            </h3>
-            <p className="text-sm text-gray-600">
-              Próximamente
-            </p>
-          </button>
+  onClick={() => handleNavigateWithTransition('/admin/reportes')}
+  className="glass-card p-8 hover:scale-105 transition-transform duration-200 text-left"
+>
+  <FileText className="w-10 h-10 text-amber-600 mb-4" />
+  <h3 className="text-xl font-bold text-gray-800 mb-2">Reportes</h3>
+  <p className="text-sm text-gray-600">Ver reportes de asistencia</p>
+</button>
 
           <button 
-            disabled
-            className="glass-card p-8 opacity-50 cursor-not-allowed text-left"
-          >
-            <Settings className="w-10 h-10 text-gray-600 mb-4" />
-            <h3 className="text-xl font-bold text-gray-800 mb-2">
-              Configuración
-            </h3>
-            <p className="text-sm text-gray-600">
-              Próximamente
-            </p>
-          </button>
+  onClick={() => handleNavigateWithTransition('/admin/marcacion-manual')}
+  className="glass-card p-8 hover:scale-105 transition-transform duration-200 text-left"
+>
+  <Clock className="w-10 h-10 text-purple-600 mb-4" />
+  <h3 className="text-xl font-bold text-gray-800 mb-2">Marcación Manual</h3>
+  <p className="text-sm text-gray-600">Registrar entradas, salidas y ausencias</p>
+</button>
+          <button 
+  onClick={() => handleNavigateWithTransition('/admin/usuarios-admin')}
+  className="glass-card p-8 hover:scale-105 transition-transform duration-200 text-left"
+>
+  <Settings className="w-10 h-10 text-gray-600 mb-4" />
+  <h3 className="text-xl font-bold text-gray-800 mb-2">Configuración</h3>
+  <p className="text-sm text-gray-600">Gestionar usuarios administradores</p>
+</button>
         </div>
       </div>
     </div>
