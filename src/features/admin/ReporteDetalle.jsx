@@ -16,7 +16,9 @@ import {
   Download,
   Filter,
   Moon,
-  Info
+  Info,
+  TrendingUp,
+  CalendarOff
 } from 'lucide-react';
 import adminService from '../../services/adminService';
 import Modal from '../../components/ui/Modal';
@@ -382,57 +384,100 @@ function ReporteDetalle() {
 
         {/* Resumen estadístico */}
         {reporte && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-            <div className="glass-card p-6">
-              <div className="flex items-center justify-between mb-2">
-                <Calendar className="w-8 h-8 text-blue-600" />
+          <>
+            {/* Badge de jornada no configurada */}
+            {!reporte.resumen.jornada_configurada && (
+              <div className="glass-card p-4 mb-4 border-l-4 border-amber-500 flex items-center gap-3">
+                <Info className="w-6 h-6 text-amber-600 flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-gray-800">Jornada no configurada</p>
+                  <p className="text-sm text-gray-600">
+                    Este empleado no tiene configuradas las horas por día. Todas las horas se calculan como normales.
+                    Editá el empleado para configurar su jornada laboral.
+                  </p>
+                </div>
               </div>
-              <h3 className="text-2xl font-bold text-gray-800">
-                {reporte.resumen.total_dias_con_marcaciones}
-              </h3>
-              <p className="text-sm text-gray-600">Días con marcaciones</p>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+              <div className="glass-card p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <Calendar className="w-8 h-8 text-blue-600" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-800">
+                  {reporte.resumen.total_dias_con_marcaciones}
+                </h3>
+                <p className="text-sm text-gray-600">Días con marcaciones</p>
+              </div>
+
+              <div className="glass-card p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <CheckCircle className="w-8 h-8 text-emerald-600" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-800">
+                  {reporte.resumen.dias_completos}
+                </h3>
+                <p className="text-sm text-gray-600">Días completos</p>
+              </div>
+
+              <div className="glass-card p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <Clock className="w-8 h-8 text-amber-600" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-800">
+                  {reporte.resumen.total_horas_trabajadas}
+                </h3>
+                <p className="text-sm text-gray-600">Horas trabajadas</p>
+                {reporte.resumen.jornada_configurada && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Jornada: {reporte.resumen.horas_por_dia}hs/día
+                  </p>
+                )}
+              </div>
+
+              <div className="glass-card p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <TrendingUp className="w-8 h-8 text-indigo-600" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-800">
+                  {reporte.resumen.jornada_configurada ? reporte.resumen.total_horas_extras : '-'}
+                </h3>
+                <p className="text-sm text-gray-600">Horas extras</p>
+              </div>
             </div>
 
-            <div className="glass-card p-6">
-              <div className="flex items-center justify-between mb-2">
-                <CheckCircle className="w-8 h-8 text-emerald-600" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="glass-card p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <CalendarOff className="w-8 h-8 text-orange-600" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-800">
+                  {reporte.resumen.jornada_configurada ? reporte.resumen.dias_no_laborables_trabajados : '-'}
+                </h3>
+                <p className="text-sm text-gray-600">Días no laborables trabajados</p>
               </div>
-              <h3 className="text-2xl font-bold text-gray-800">
-                {reporte.resumen.dias_completos}
-              </h3>
-              <p className="text-sm text-gray-600">Días completos</p>
-            </div>
 
-            <div className="glass-card p-6">
-              <div className="flex items-center justify-between mb-2">
-                <Clock className="w-8 h-8 text-amber-600" />
+              <div className="glass-card p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <Info className="w-8 h-8 text-purple-600" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-800">
+                  {reporte.resumen.ausencias_registradas}
+                </h3>
+                <p className="text-sm text-gray-600">Ausencias</p>
               </div>
-              <h3 className="text-2xl font-bold text-gray-800">
-                {reporte.resumen.total_horas_trabajadas}
-              </h3>
-              <p className="text-sm text-gray-600">Horas trabajadas</p>
-            </div>
 
-            <div className="glass-card p-6">
-              <div className="flex items-center justify-between mb-2">
-                <Info className="w-8 h-8 text-purple-600" />
+              <div className="glass-card p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <AlertTriangle className="w-8 h-8 text-red-600" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-800">
+                  {reporte.resumen.dias_con_problemas}
+                </h3>
+                <p className="text-sm text-gray-600">Requieren revisión</p>
               </div>
-              <h3 className="text-2xl font-bold text-gray-800">
-                {reporte.resumen.ausencias_registradas}
-              </h3>
-              <p className="text-sm text-gray-600">Ausencias</p>
             </div>
-
-            <div className="glass-card p-6">
-              <div className="flex items-center justify-between mb-2">
-                <AlertTriangle className="w-8 h-8 text-red-600" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-800">
-                {reporte.resumen.dias_con_problemas}
-              </h3>
-              <p className="text-sm text-gray-600">Requieren revisión</p>
-            </div>
-          </div>
+          </>
         )}
 
         {/* Días con problemas */}
@@ -522,7 +567,9 @@ function ReporteDetalle() {
                   key={index}
                   className={`p-4 rounded-lg border-l-4 ${
                     marcacion.tipo === 'completo' 
-                      ? 'bg-emerald-50 border-emerald-500' 
+                      ? marcacion.es_no_laborable
+                        ? 'bg-orange-50 border-orange-500'
+                        : 'bg-emerald-50 border-emerald-500'
                       : marcacion.tipo === 'ausencia'
                       ? 'bg-purple-50 border-purple-500'
                       : 'bg-amber-50 border-amber-500'
@@ -530,7 +577,7 @@ function ReporteDetalle() {
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <h3 className="font-semibold text-gray-800">
                           {formatearFechaCompleta(marcacion.fecha)}
                         </h3>
@@ -540,11 +587,17 @@ function ReporteDetalle() {
                             Turno nocturno
                           </span>
                         )}
+                        {marcacion.es_no_laborable && (
+                          <span className="flex items-center gap-1 px-2 py-1 text-xs font-semibold bg-orange-100 text-orange-700 rounded-full">
+                            <CalendarOff className="w-3 h-3" />
+                            Día no laborable
+                          </span>
+                        )}
                         <span className="text-xs text-gray-500">({marcacion.origen})</span>
                       </div>
 
                       {marcacion.tipo === 'completo' && (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-sm">
                           <div className="flex items-center gap-2 text-gray-700">
                             <span className="font-medium">Entrada:</span>
                             <span>{formatearHora(marcacion.hora_entrada)}</span>
@@ -562,6 +615,12 @@ function ReporteDetalle() {
                             <Clock className="w-4 h-4" />
                             <span>{marcacion.horas_trabajadas}hs</span>
                           </div>
+                          {marcacion.horas_extras > 0 && (
+                            <div className="flex items-center gap-2 text-indigo-700 font-semibold">
+                              <TrendingUp className="w-4 h-4" />
+                              <span>+{marcacion.horas_extras}hs extras</span>
+                            </div>
+                          )}
                         </div>
                       )}
 

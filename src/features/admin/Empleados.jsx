@@ -13,7 +13,8 @@ import {
   RefreshCw,
   Filter,
   X,
-  Briefcase
+  Briefcase,
+  Clock
 } from 'lucide-react';
 import adminService from '../../services/adminService';
 import Modal from '../../components/ui/Modal';
@@ -59,14 +60,24 @@ function Empleados() {
 
   // Estados del formulario
   const [formData, setFormData] = useState({
-    telefono: '',
-    nombre: '',
-    apellido: '',
-    email: '',
-    oficina_id: '',
-    departamento_id: '',
-    activo: true
-  });
+  telefono: '',
+  nombre: '',
+  apellido: '',
+  email: '',
+  oficina_id: '',
+  departamento_id: '',
+  activo: true,
+  jornada: {
+    horas_por_dia: '',
+    lunes: true,
+    martes: true,
+    miercoles: true,
+    jueves: true,
+    viernes: true,
+    sabado: false,
+    domingo: false
+  }
+});
   const [erroresForm, setErroresForm] = useState({});
 
   // Cargar empleados
@@ -159,51 +170,81 @@ function Empleados() {
 
   // Handlers del modal
   const handleAbrirModalCrear = () => {
-    setModoModal('crear');
-    setEmpleadoSeleccionado(null);
-    setFormData({
-      telefono: '',
-      nombre: '',
-      apellido: '',
-      email: '',
-      oficina_id: '',
-      departamento_id: '',
-      activo: true
-    });
-    setErroresForm({});
-    setModalAbierto(true);
-  };
+  setModoModal('crear');
+  setEmpleadoSeleccionado(null);
+  setFormData({
+    telefono: '',
+    nombre: '',
+    apellido: '',
+    email: '',
+    oficina_id: '',
+    departamento_id: '',
+    activo: true,
+    jornada: {
+      horas_por_dia: '',
+      lunes: true,
+      martes: true,
+      miercoles: true,
+      jueves: true,
+      viernes: true,
+      sabado: false,
+      domingo: false
+    }
+  });
+  setErroresForm({});
+  setModalAbierto(true);
+};
 
   const handleAbrirModalEditar = (empleado) => {
-    setModoModal('editar');
-    setEmpleadoSeleccionado(empleado);
-    setFormData({
-      telefono: empleado.telefono,
-      nombre: empleado.nombre,
-      apellido: empleado.apellido,
-      email: empleado.email || '',
-      oficina_id: empleado.oficina_id || '',
-      departamento_id: empleado.departamento_id || '',
-      activo: empleado.activo
-    });
-    setErroresForm({});
-    setModalAbierto(true);
-  };
+  setModoModal('editar');
+  setEmpleadoSeleccionado(empleado);
+  setFormData({
+    telefono: empleado.telefono,
+    nombre: empleado.nombre,
+    apellido: empleado.apellido,
+    email: empleado.email || '',
+    oficina_id: empleado.oficina_id || '',
+    departamento_id: empleado.departamento_id || '',
+    activo: empleado.activo,
+    jornada: {
+      horas_por_dia: empleado.jornada?.horas_por_dia || '',
+      lunes: empleado.jornada?.lunes ?? true,
+      martes: empleado.jornada?.martes ?? true,
+      miercoles: empleado.jornada?.miercoles ?? true,
+      jueves: empleado.jornada?.jueves ?? true,
+      viernes: empleado.jornada?.viernes ?? true,
+      sabado: empleado.jornada?.sabado ?? false,
+      domingo: empleado.jornada?.domingo ?? false
+    }
+  });
+  setErroresForm({});
+  setModalAbierto(true);
+};
 
   const handleCerrarModal = () => {
-    setModalAbierto(false);
-    setEmpleadoSeleccionado(null);
-    setFormData({
-      telefono: '',
-      nombre: '',
-      apellido: '',
-      email: '',
-      oficina_id: '',
-      departamento_id: '',
-      activo: true
-    });
-    setErroresForm({});
-  };
+  setModalAbierto(false);
+  setEmpleadoSeleccionado(null);
+  setFormData({
+    telefono: '',
+    nombre: '',
+    apellido: '',
+    email: '',
+    oficina_id: '',
+    departamento_id: '',
+    activo: true,
+    jornada: {
+      horas_por_dia: '',
+      lunes: true,
+      martes: true,
+      miercoles: true,
+      jueves: true,
+      viernes: true,
+      sabado: false,
+      domingo: false
+    }
+  });
+  setErroresForm({});
+};
 
   // Validar formulario
   const validarFormulario = () => {
@@ -688,24 +729,98 @@ function Empleados() {
               </select>
             </div>
 
-            {/* Departamento */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Departamento (opcional)
-              </label>
-              <select
-                value={formData.departamento_id}
-                onChange={(e) => setFormData({ ...formData, departamento_id: e.target.value })}
-                className="input-glass w-full"
-              >
-                <option value="">Sin asignar</option>
-                {departamentos.map(dept => (
-                  <option key={dept.id} value={dept.id}>
-                    {dept.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
+           {/* Departamento */}
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    Departamento (opcional)
+  </label>
+  <select
+    value={formData.departamento_id}
+    onChange={(e) => setFormData({ ...formData, departamento_id: e.target.value })}
+    className="input-glass w-full"
+  >
+    <option value="">Sin asignar</option>
+    {departamentos.map(dept => (
+      <option key={dept.id} value={dept.id}>
+        {dept.nombre}
+      </option>
+    ))}
+  </select>
+</div>
+
+{/* Configuración de Jornada */}
+<div className="pt-4 border-t border-gray-200">
+  <div className="flex items-center gap-2 mb-4">
+    <Clock className="w-5 h-5 text-amber-600" />
+    <h3 className="font-semibold text-gray-800">Configuración de Jornada</h3>
+  </div>
+
+  {/* Horas por día */}
+  <div className="mb-4">
+    <label className="block text-sm font-medium text-gray-700 mb-2">
+      Horas por día
+    </label>
+    <input
+      type="number"
+      step="0.5"
+      min="1"
+      max="24"
+      value={formData.jornada.horas_por_dia}
+      onChange={(e) => setFormData({
+        ...formData,
+        jornada: { ...formData.jornada, horas_por_dia: e.target.value }
+      })}
+      placeholder="8"
+      className="input-glass w-full"
+    />
+    <p className="text-xs text-gray-500 mt-1">
+      Horas que debe trabajar el empleado por día. Si no se configura, no se calcularán horas extras.
+    </p>
+  </div>
+
+  {/* Días laborables */}
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-2">
+      Días laborables
+    </label>
+    <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+      {[
+        { key: 'lunes', label: 'Lun' },
+        { key: 'martes', label: 'Mar' },
+        { key: 'miercoles', label: 'Mié' },
+        { key: 'jueves', label: 'Jue' },
+        { key: 'viernes', label: 'Vie' },
+        { key: 'sabado', label: 'Sáb' },
+        { key: 'domingo', label: 'Dom' }
+      ].map(dia => (
+        <label
+          key={dia.key}
+          className={`flex flex-col items-center justify-center p-2 rounded-lg border cursor-pointer transition-colors ${
+            formData.jornada[dia.key]
+              ? 'bg-amber-100 border-amber-400 text-amber-800'
+              : 'bg-gray-50 border-gray-200 text-gray-500'
+          }`}
+        >
+          <input
+            type="checkbox"
+            checked={formData.jornada[dia.key]}
+            onChange={(e) => setFormData({
+              ...formData,
+              jornada: { ...formData.jornada, [dia.key]: e.target.checked }
+            })}
+            className="sr-only"
+          />
+          <span className="text-sm font-medium">{dia.label}</span>
+        </label>
+      ))}
+    </div>
+    <p className="text-xs text-gray-500 mt-2">
+      Si trabaja un día no marcado, se resaltará en el reporte para revisión.
+    </p>
+  </div>
+</div>
+
+{/* Estado Activo - SOLO EN MODO EDITAR */}
 
             {/* Estado Activo - SOLO EN MODO EDITAR */}
             {modoModal === 'editar' && (
