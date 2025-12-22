@@ -1,68 +1,88 @@
-🎯 Características Principales
-✅ Instalable (PWA) - Soporte para Service Workers (sw.js) y funcionamiento offline. ✅ Verificación con IA - Integración con Claude (Anthropic) para validación de identidad. ✅ Geolocalización en Tiempo Real - Captura y validación de coordenadas GPS al marcar. ✅ Gestión Multiarea - Paneles específicos para Administradores y Empleados. ✅ Sistema de Notificaciones - Soporte para Push Notifications y alertas visuales dinámicas. ✅ Seguridad de Rutas - Protección de vistas mediante JWT y contextos de autenticación.
+# 📱 Sistema PWA de Presentismo - Frontend
 
-📁 Estructura del Proyecto
-Plaintext
+**Interfaz PWA con React + Vite + Tailwind CSS + Anthropic Claude**
 
+Este es el cliente del sistema de control de asistencia para **Trinity Web Development**. Está diseñado bajo una **filosofía zen y minimalista** como una **Progressive Web App (PWA)** para permitir el fichaje de empleados mediante geolocalización y verificación por IA.
+
+---
+
+## 🎯 Características
+
+✅ **Experiencia PWA Nativa** - Instalable en dispositivos móviles con soporte para Service Workers (`sw.js`) y funcionamiento offline.
+✅ **Verificación de Identidad con IA** - Interfaz dinámica para responder preguntas generadas por **Claude API** para evitar suplantación.
+✅ **Geolocalización en Tiempo Real** - Captura de coordenadas GPS mediante el navegador para validar la ubicación del fichaje.
+✅ **Arquitectura por Features** - Organización de código escalable separando Admin, Empleado y Autenticación.
+✅ **Protección de Rutas** - Sistema de navegación seguro basado en JWT y estados de autenticación global.
+✅ **Notificaciones Push** - Sistema integrado de avisos para confirmar marcaciones y alertas administrativas.
+
+---
+
+## 📁 Estructura del Proyecto
+
+```text
 src/
-|   App.jsx                 # Enrutador principal y lógica de rutas
-|   Login.jsx               # Pantalla de acceso unificada
+|   App.css
+|   App.jsx                 # Enrutador principal y lógica de rutas protegidas
+|   index.css
+|   Login.jsx               # Acceso unificado (Admin/Empleado)
 |   main.jsx                # Punto de entrada de React
-|   sw.js                   # Configuración de Service Worker (PWA)
+|   sw.js                   # Service Worker para capacidades PWA
 |   
++---assets/
+|       react.svg
+|       
 +---components/             # Componentes de arquitectura
-|   |   ProtectedRoute.jsx  # Validador de rutas privadas
-|   |   PublicRoute.jsx    # Validador de rutas públicas
-|   \---ui/                 # Componentes de interfaz (Modales, Toasts)
+|   |   ProtectedRoute.jsx  # Validador de acceso para usuarios logueados
+|   |   PublicRoute.jsx     # Validador para evitar login doble
+|   \---ui/                 # Modales, Toasts, Paginación y elementos UI
 |
-+---context/                # Estados globales (Auth y App)
++---context/                # Estados globales (AuthContext, AppContext)
 |
-+---features/               # Lógica de negocio por roles
-|   +---admin/              # Panel de control, Reportes y Gestión
-|   +---auth/               # Flujo de Login y Preguntas de IA
-|   \---empleado/           # Marcación, Historial y Dashboard de usuario
++---features/               # Lógica de negocio (El corazón de la App)
+|   +---admin/              # Gestión de reportes, empleados y oficinas
+|   +---auth/               # Flujo de login y validación por IA (PreguntasIA.jsx)
+|   \---empleado/           # Panel de fichaje, historial y tareas
 |
-+---hooks/                  # Lógica reutilizable (GPS, API, Toast)
++---hooks/                  # Custom Hooks (useAuth, useGeolocation, useToast)
 |
-+---services/               # Comunicación con APIs externas y Backend
-|       anthropicService.js # Conexión con IA Claude
-|       api.js              # Configuración base de Fetch/Axios
-|       pushNotification.js # Gestión de notificaciones push
++---services/               # Comunicación con Backend y APIs
+|       anthropicService.js # Lógica para la validación con Claude
+|       api.js              # Configuración base de Axios/Fetch
+|       authService.js      # Gestión de tokens y sesiones
 |
-\---utils/                  # Validadores, formateadores y constantes
-🚀 Instalación y Desarrollo
+\---utils/                  # Validadores de GPS y formateadores de datos
+
+🚀 Instalación Rápida
 1. Requisitos
-Node.js v18.0 o superior.
+Node.js 18.x o superior.
 
 npm o yarn.
 
-2. Configuración
+2. Pasos para despliegue local
 Bash
 
-# Instalar dependencias
+# 1. Clonar el repositorio
+git clone [https://github.com/Ezequiellarroza/asistencias.git](https://github.com/Ezequiellarroza/asistencias.git)
+
+# 2. Instalar dependencias
 npm install
 
-# Configurar variables de entorno
+# 3. Configurar variables de entorno
 cp .env.example .env
-3. Comandos
-Desarrollo: npm run dev
 
-Producción: npm run build
-
-Previsualizar: npm run preview
-
-⚙️ Variables de Entorno (.env)
-Es necesario configurar la URL del backend para que el sistema funcione:
+# 4. Iniciar servidor de desarrollo
+npm run dev
+📡 Configuración (.env)
+El frontend requiere configurar la URL de la API REST (PHP) para funcionar correctamente:
 
 Fragmento de código
 
-VITE_API_URL=https://tu-api-backend.com/api
-VITE_ANTHROPIC_KEY=tu_key_aqui
-📞 Soporte y Desarrollo
-Desarrollador: Eze - Trinity Web Development
+VITE_API_URL=[https://tu-api-backend.com/api](https://tu-api-backend.com/api)
+VITE_APP_NAME="Asistencias Trinity"
+🔒 Seguridad Implementada
+✅ Rutas Protegidas - Verificación de JWT en cada cambio de vista. ✅ Sanitización de Datos - Limpieza de inputs para prevenir ataques XSS. ✅ Validación GPS - Comparación de precisión de coordenadas antes de enviar al servidor. ✅ Manejo de Sesiones - Persistencia segura de tokens en almacenamiento local.
 
-Marca: Trinity Personal Brand
+📞 Soporte
+Desarrollador: Eze - Trinity Web Development URL: https://ezequiellarroza.com.ar
 
-URL: https://ezequiellarroza.com.ar
-
-Versión 1.0 | Dic 2025 | Estructura Profesional ✅
+Versión 1.0 | Dic 2025 | Production Ready ✅
