@@ -28,6 +28,8 @@ import MarcacionManual from './features/admin/MarcacionManual';
 import Reportes from './features/admin/Reportes';
 import ReporteDetalle from './features/admin/ReporteDetalle';
 import UsuariosAdmin from './features/admin/UsuariosAdmin';
+import Configuracion from './features/admin/Configuracion';
+import Feriados from './features/admin/Feriados';
 
 function App() {
   // Listener global para manejar errores 401
@@ -205,6 +207,24 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
+            <Route
+  path="/admin/configuracion"
+  element={
+    <ProtectedRoute requiredRole="admin">
+      <Configuracion />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/admin/feriados"
+  element={
+    <ProtectedRoute requiredRole="admin">
+      <Feriados />
+    </ProtectedRoute>
+  }
+/>
 
             {/* Ruta 404 */}
             <Route path="*" element={<Navigate to="/" replace />} />

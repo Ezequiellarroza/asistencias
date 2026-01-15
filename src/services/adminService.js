@@ -937,6 +937,98 @@ class AdminService {
       throw error;
     }
   }
+
+  // ============================================
+  // MÉTODOS DE FERIADOS
+  // ============================================
+
+  /**
+   * Obtener lista de feriados
+   * @param {number} year - Año específico (opcional)
+   * @returns {Promise<Object>} - Lista de feriados
+   */
+  async getFeriados(year = null) {
+    try {
+      const params = year ? { year } : {};
+      const response = await api.get('/admin/feriados.php', params);
+      
+      if (response.success && response.data) {
+        return response.data;
+      }
+      
+      throw new Error(response.message || response.mensaje || 'Error al obtener feriados');
+    } catch (error) {
+      console.error('Error en getFeriados:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Crear nuevo feriado
+   * @param {Object} datos - Datos del feriado
+   * @param {string} datos.fecha - Fecha YYYY-MM-DD (requerido)
+   * @param {string} datos.nombre - Nombre del feriado (requerido)
+   * @param {string} datos.descripcion - Descripción (opcional)
+   * @returns {Promise<Object>} - Datos del feriado creado
+   */
+  async crearFeriado(datos) {
+    try {
+      const response = await api.post('/admin/feriados.php', datos);
+      
+      if (response.success && response.data) {
+        return response.data;
+      }
+      
+      throw new Error(response.message || response.mensaje || 'Error al crear feriado');
+    } catch (error) {
+      console.error('Error en crearFeriado:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Actualizar feriado existente
+   * @param {number} feriadoId - ID del feriado
+   * @param {Object} datos - Datos a actualizar
+   * @returns {Promise<Object>} - Datos del feriado actualizado
+   */
+  async actualizarFeriado(feriadoId, datos) {
+    try {
+      const response = await api.put('/admin/feriados.php', {
+        id: feriadoId,
+        ...datos
+      });
+      
+      if (response.success && response.data) {
+        return response.data;
+      }
+      
+      throw new Error(response.message || response.mensaje || 'Error al actualizar feriado');
+    } catch (error) {
+      console.error('Error en actualizarFeriado:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Eliminar feriado (soft delete)
+   * @param {number} feriadoId - ID del feriado
+   * @returns {Promise<Object>} - Confirmación
+   */
+  async eliminarFeriado(feriadoId) {
+    try {
+      const response = await api.delete(`/admin/feriados.php?id=${feriadoId}`);
+      
+      if (response.success) {
+        return response.data || { mensaje: 'Feriado eliminado' };
+      }
+      
+      throw new Error(response.message || response.mensaje || 'Error al eliminar feriado');
+    } catch (error) {
+      console.error('Error en eliminarFeriado:', error);
+      throw error;
+    }
+  }
 }
 
 

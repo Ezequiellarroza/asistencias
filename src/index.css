@@ -29,7 +29,7 @@
 
   /* Input con efecto glass */
   .input-glass {
-    @apply bg-white/70 backdrop-blur-lg rounded-2xl border border-amber-200/40 focus:border-emerald-400/50 focus:ring-2 focus:ring-amber-400/30 transition-all duration-300;
+    @apply bg-white/70 backdrop-blur-lg rounded-2xl border border-amber-200/40 focus:border-emerald-400/50 focus:ring-2 focus:ring-amber-400/30 transition-all duration-300 px-4 py-3;
   }
 
   /* Animaciones suaves */

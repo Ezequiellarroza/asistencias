@@ -231,12 +231,12 @@ function AdminDashboard() {
   <p className="text-sm text-gray-600">Registrar entradas, salidas y ausencias</p>
 </button>
           <button 
-  onClick={() => handleNavigateWithTransition('/admin/usuarios-admin')}
+  onClick={() => handleNavigateWithTransition('/admin/configuracion')}
   className="glass-card p-8 hover:scale-105 transition-transform duration-200 text-left"
 >
   <Settings className="w-10 h-10 text-gray-600 mb-4" />
   <h3 className="text-xl font-bold text-gray-800 mb-2">Configuración</h3>
-  <p className="text-sm text-gray-600">Gestionar usuarios administradores</p>
+  <p className="text-sm text-gray-600">Usuarios admin, feriados y más</p>
 </button>
         </div>
       </div>
