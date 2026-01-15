@@ -18,12 +18,8 @@ import {
   Moon,
   Info,
   TrendingUp,
-  CalendarOff,
-  MapPinOff,
-  Smartphone,
-  FileSpreadsheet
+  CalendarOff
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
 import adminService from '../../services/adminService';
 import Modal from '../../components/ui/Modal';
 
@@ -257,221 +253,6 @@ function ReporteDetalle() {
     return `${dias[date.getDay()]} ${date.getDate()} ${meses[date.getMonth()]}`;
   };
 
-  // Renderizar badges de alertas
-  const renderAlertaBadge = (alerta) => {
-    const configs = {
-      'gps_fuera_rango': {
-        icon: MapPinOff,
-        label: 'Fuera de rango',
-        className: 'bg-red-100 text-red-700 border-red-200'
-      },
-      'dispositivo_compartido': {
-        icon: Smartphone,
-        label: 'Cel. compartido',
-        className: 'bg-orange-100 text-orange-700 border-orange-200'
-      }
-    };
-
-    const config = configs[alerta.tipo];
-    if (!config) return null;
-
-    const Icon = config.icon;
-
-    return (
-      <span 
-        key={alerta.tipo}
-        className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full border ${config.className}`}
-        title={alerta.mensaje}
-      >
-        <Icon className="w-3 h-3" />
-        {config.label}
-      </span>
-    );
-  };
-
-  // ============================================
-  // EXPORTAR A EXCEL
-  // ============================================
-  const handleExportarExcel = () => {
-    if (!reporte) return;
-
-    // Crear workbook
-    const wb = XLSX.utils.book_new();
-
-    // ========================================
-    // HOJA 1: RESUMEN
-    // ========================================
-    const resumenData = [
-      ['REPORTE DE ASISTENCIA'],
-      [],
-      ['Empleado:', reporte.empleado.nombre_completo],
-      ['Teléfono:', reporte.empleado.telefono],
-      ['Email:', reporte.empleado.email || 'No registrado'],
-      [],
-      ['PERÍODO'],
-      ['Desde:', formatearFecha(reporte.periodo.fecha_desde)],
-      ['Hasta:', formatearFecha(reporte.periodo.fecha_hasta)],
-      [],
-      ['RESUMEN'],
-      ['Días con marcaciones:', reporte.resumen.total_dias_con_marcaciones],
-      ['Días completos:', reporte.resumen.dias_completos],
-      ['Total horas trabajadas:', reporte.resumen.total_horas_trabajadas],
-      ['Total horas extras:', reporte.resumen.total_horas_extras],
-      ['Días no laborables trabajados:', reporte.resumen.dias_no_laborables_trabajados],
-      ['Días feriados trabajados:', reporte.resumen.dias_feriados_trabajados],
-      ['Ausencias:', reporte.resumen.ausencias_registradas],
-      ['Días con problemas:', reporte.resumen.dias_con_problemas],
-      [],
-      ['Jornada configurada:', reporte.resumen.jornada_configurada ? 'Sí' : 'No'],
-      ['Horas por día:', reporte.resumen.horas_por_dia || 'No configurado']
-    ];
-
-    const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
-    
-    // Ajustar ancho de columnas
-    wsResumen['!cols'] = [{ wch: 30 }, { wch: 30 }];
-    
-    XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen');
-
-    // ========================================
-    // HOJA 2: DETALLE DE MARCACIONES
-    // ========================================
-    const detalleHeaders = [
-      'Fecha',
-      'Día',
-      'Entrada',
-      'Alerta Entrada',
-      'Salida',
-      'Alerta Salida',
-      'Horas Trabajadas',
-      'Horas Extras',
-      'Tipo',
-      'Origen',
-      'Oficina',
-      'Observaciones'
-    ];
-
-    const detalleData = reporte.marcaciones_detalle.map(m => {
-      const date = new Date(m.fecha + 'T00:00:00');
-      const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-      
-      // Formatear alertas de entrada
-      const alertasEntradaTexto = m.alertas_entrada && m.alertas_entrada.length > 0
-        ? m.alertas_entrada.map(a => {
-            if (a.tipo === 'gps_fuera_rango') return 'GPS fuera de rango';
-            if (a.tipo === 'dispositivo_compartido') return 'Cel. compartido';
-            return a.tipo;
-          }).join(', ')
-        : '';
-      
-      // Formatear alertas de salida
-      const alertasSalidaTexto = m.alertas_salida && m.alertas_salida.length > 0
-        ? m.alertas_salida.map(a => {
-            if (a.tipo === 'gps_fuera_rango') return 'GPS fuera de rango';
-            if (a.tipo === 'dispositivo_compartido') return 'Cel. compartido';
-            return a.tipo;
-          }).join(', ')
-        : '';
-
-      // Construir observaciones
-      let observaciones = [];
-      if (m.es_no_laborable) observaciones.push('Día no laborable');
-      if (m.es_feriado) observaciones.push(m.nombre_feriado || 'Feriado');
-      if (m.observacion) observaciones.push(m.observacion);
-
-      return [
-        formatearFecha(m.fecha),
-        dias[date.getDay()],
-        m.hora_entrada ? formatearHora(m.hora_entrada) : '-',
-        alertasEntradaTexto,
-        m.hora_salida ? formatearHora(m.hora_salida) : '-',
-        alertasSalidaTexto,
-        m.horas_trabajadas ?? '-',
-        m.horas_extras ?? '-',
-        m.tipo === 'completo' ? 'Completo' : 
-          m.tipo === 'incompleto' ? 'Incompleto' : 
-          m.tipo === 'ausencia' ? 'Ausencia' : 
-          m.tipo === 'turno_invalido' ? 'Turno inválido' : m.tipo,
-        m.origen,
-        m.oficina_nombre || '-',
-        observaciones.join(', ')
-      ];
-    });
-
-    const wsDetalle = XLSX.utils.aoa_to_sheet([detalleHeaders, ...detalleData]);
-    
-    // Ajustar ancho de columnas
-    wsDetalle['!cols'] = [
-      { wch: 12 },  // Fecha
-      { wch: 12 },  // Día
-      { wch: 8 },   // Entrada
-      { wch: 18 },  // Alerta Entrada
-      { wch: 8 },   // Salida
-      { wch: 18 },  // Alerta Salida
-      { wch: 15 },  // Horas Trabajadas
-      { wch: 12 },  // Horas Extras
-      { wch: 12 },  // Tipo
-      { wch: 18 },  // Origen
-      { wch: 20 },  // Oficina
-      { wch: 30 }   // Observaciones
-    ];
-    
-    XLSX.utils.book_append_sheet(wb, wsDetalle, 'Detalle Marcaciones');
-
-    // ========================================
-    // HOJA 3: DÍAS CON PROBLEMAS (si hay)
-    // ========================================
-    if (reporte.dias_con_problemas.length > 0) {
-      const problemasHeaders = [
-        'Fecha',
-        'Problema',
-        'Mensaje',
-        'Hora Entrada',
-        'Hora Salida'
-      ];
-
-      const problemasData = reporte.dias_con_problemas.map(d => {
-        let fecha = '-';
-        if (d.fecha_entrada) {
-          fecha = formatearFecha(d.fecha_entrada.split(' ')[0]);
-        } else if (d.fecha_salida) {
-          fecha = formatearFecha(d.fecha_salida.split(' ')[0]);
-        }
-
-        return [
-          fecha,
-          d.problema === 'entrada_sin_salida' ? 'Falta salida' :
-            d.problema === 'salida_sin_entrada' ? 'Falta entrada' :
-            d.problema === 'diferencia_maxima_excedida' ? 'Excede 16hs' : d.problema,
-          d.mensaje,
-          d.entrada ? d.entrada.fecha_hora.split(' ')[1].substring(0, 5) : '-',
-          d.salida ? d.salida.fecha_hora.split(' ')[1].substring(0, 5) : '-'
-        ];
-      });
-
-      const wsProblemas = XLSX.utils.aoa_to_sheet([problemasHeaders, ...problemasData]);
-      
-      wsProblemas['!cols'] = [
-        { wch: 12 },
-        { wch: 15 },
-        { wch: 50 },
-        { wch: 12 },
-        { wch: 12 }
-      ];
-      
-      XLSX.utils.book_append_sheet(wb, wsProblemas, 'Días con Problemas');
-    }
-
-    // ========================================
-    // GENERAR Y DESCARGAR ARCHIVO
-    // ========================================
-    const nombreArchivo = `Reporte_${reporte.empleado.nombre_completo.replace(/\s+/g, '_')}_${reporte.periodo.fecha_desde}_${reporte.periodo.fecha_hasta}.xlsx`;
-    
-    XLSX.writeFile(wb, nombreArchivo);
-    
-    mostrarNotificacion('Reporte exportado exitosamente', 'success');
-  };
-
   // Loading state
   if (loading && !reporte) {
     return (
@@ -526,25 +307,14 @@ function ReporteDetalle() {
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              {reporte && (
-                <button
-                  onClick={handleExportarExcel}
-                  className="btn-glass px-4 py-2 flex items-center gap-2 text-emerald-700 hover:bg-emerald-50"
-                >
-                  <FileSpreadsheet className="w-4 h-4" />
-                  <span className="hidden sm:inline">Exportar Excel</span>
-                </button>
-              )}
-              <button
-                onClick={cargarReporte}
-                disabled={loading}
-                className="btn-glass px-4 py-2 flex items-center gap-2"
-              >
-                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Actualizar</span>
-              </button>
-            </div>
+            <button
+              onClick={cargarReporte}
+              disabled={loading}
+              className="btn-glass px-4 py-2 flex items-center gap-2"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Actualizar</span>
+            </button>
           </div>
 
           {/* Info del empleado */}
@@ -823,27 +593,14 @@ function ReporteDetalle() {
                             Día no laborable
                           </span>
                         )}
-                        {marcacion.es_feriado && (
-                          <span className="flex items-center gap-1 px-2 py-1 text-xs font-semibold bg-purple-100 text-purple-700 rounded-full">
-                            <Calendar className="w-3 h-3" />
-                            {marcacion.nombre_feriado || 'Feriado'}
-                          </span>
-                        )}
                         <span className="text-xs text-gray-500">({marcacion.origen})</span>
                       </div>
 
                       {marcacion.tipo === 'completo' && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 text-sm">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-sm">
                           <div className="flex items-center gap-2 text-gray-700">
                             <span className="font-medium">Entrada:</span>
                             <span>{formatearHora(marcacion.hora_entrada)}</span>
-                            {marcacion.alertas_entrada && marcacion.alertas_entrada.length > 0 && (
-                              <div className="flex gap-1 flex-wrap">
-                                {marcacion.alertas_entrada.map((alerta, idx) => (
-                                  <span key={idx}>{renderAlertaBadge(alerta)}</span>
-                                ))}
-                              </div>
-                            )}
                           </div>
                           <div className="flex items-center gap-2 text-gray-700">
                             <span className="font-medium">Salida:</span>
@@ -853,13 +610,6 @@ function ReporteDetalle() {
                                 ` (${formatearFecha(marcacion.fecha_salida)})`
                               }
                             </span>
-                            {marcacion.alertas_salida && marcacion.alertas_salida.length > 0 && (
-                              <div className="flex gap-1 flex-wrap">
-                                {marcacion.alertas_salida.map((alerta, idx) => (
-                                  <span key={idx}>{renderAlertaBadge(alerta)}</span>
-                                ))}
-                              </div>
-                            )}
                           </div>
                           <div className="flex items-center gap-2 text-emerald-700 font-semibold">
                             <Clock className="w-4 h-4" />
@@ -887,28 +637,10 @@ function ReporteDetalle() {
                         <div className="text-sm text-amber-700">
                           <span className="font-medium">{marcacion.observacion}</span>
                           {marcacion.hora_entrada && (
-                            <span className="ml-2 inline-flex items-center gap-1">
-                              Entrada: {formatearHora(marcacion.hora_entrada)}
-                              {marcacion.alertas_entrada && marcacion.alertas_entrada.length > 0 && (
-                                <span className="ml-1">
-                                  {marcacion.alertas_entrada.map((alerta, idx) => (
-                                    <span key={idx}>{renderAlertaBadge(alerta)}</span>
-                                  ))}
-                                </span>
-                              )}
-                            </span>
+                            <span className="ml-2">Entrada: {formatearHora(marcacion.hora_entrada)}</span>
                           )}
                           {marcacion.hora_salida && (
-                            <span className="ml-2 inline-flex items-center gap-1">
-                              Salida: {formatearHora(marcacion.hora_salida)}
-                              {marcacion.alertas_salida && marcacion.alertas_salida.length > 0 && (
-                                <span className="ml-1">
-                                  {marcacion.alertas_salida.map((alerta, idx) => (
-                                    <span key={idx}>{renderAlertaBadge(alerta)}</span>
-                                  ))}
-                                </span>
-                              )}
-                            </span>
+                            <span className="ml-2">Salida: {formatearHora(marcacion.hora_salida)}</span>
                           )}
                         </div>
                       )}
