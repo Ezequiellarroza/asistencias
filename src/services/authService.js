@@ -22,6 +22,9 @@ class AuthService {
           telefono: response.data.telefono
         };
         
+        // ✅ Guardar JWT token
+        api.setToken(response.data.jwt_token);
+        
         // Guardar datos del empleado en localStorage
         localStorage.setItem('empleado', JSON.stringify(empleado));
         localStorage.setItem('oficina', JSON.stringify(response.data.oficina));
