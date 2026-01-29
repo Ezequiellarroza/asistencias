@@ -27,15 +27,10 @@ class ApiService {
    * Guardar token JWT en localStorage
    */
   setToken(token) {
-    console.log('=== setToken llamado ===');
-    console.log('Token recibido:', token ? token.substring(0, 50) + '...' : 'NULL');
-    
     if (token) {
       localStorage.setItem('jwt_token', token);
-      console.log('Token guardado en localStorage');
     } else {
       localStorage.removeItem('jwt_token');
-      console.log('Token removido de localStorage');
     }
   }
 
@@ -58,12 +53,7 @@ class ApiService {
    */
   async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
-    
-    console.log('=== API REQUEST ===');
-    console.log('URL:', url);
-    console.log('Method:', options.method || 'GET');
-    console.log('Body:', options.body);
-    
+
     const config = {
       ...options,
       headers: {
@@ -82,8 +72,6 @@ class ApiService {
       });
 
       clearTimeout(timeoutId);
-      
-      console.log('Response status:', response.status);
 
       // Detectar error 401 específicamente
       if (response.status === 401) {
@@ -102,19 +90,14 @@ class ApiService {
 
       // Leer el texto de respuesta primero
       const text = await response.text();
-      
-      console.log('Response text:', text);
-      
+
       // Intentar parsear como JSON
       let data;
       try {
         data = text ? JSON.parse(text) : {};
       } catch (e) {
-        console.error('Error parsing JSON:', text);
         throw new Error('Respuesta inválida del servidor');
       }
-      
-      console.log('Response parsed:', data);
 
       if (!response.ok) {
         throw new Error(data.mensaje || data.error || `Error ${response.status}`);
@@ -125,8 +108,6 @@ class ApiService {
       if (error.name === 'AbortError') {
         throw new Error('La petición tardó demasiado tiempo');
       }
-      
-      console.error('API Error:', error);
       throw error;
     }
   }

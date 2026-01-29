@@ -219,6 +219,65 @@ function ReporteDetalle() {
     setTimeout(() => setNotificacion(null), 3000);
   };
 
+  // Exportar a Excel
+  const exportarExcel = async () => {
+    if (!reporte) return;
+
+    const XLSX = await import('xlsx');
+
+    // Hoja 1: Resumen
+    const resumenData = [
+      ['Reporte de Asistencia'],
+      ['Empleado', reporte.empleado.nombre_completo],
+      ['Período', `${formatearFecha(reporte.periodo.fecha_desde)} - ${formatearFecha(reporte.periodo.fecha_hasta)}`],
+      [],
+      ['Resumen'],
+      ['Días con marcaciones', reporte.resumen.total_dias_con_marcaciones],
+      ['Días completos', reporte.resumen.dias_completos],
+      ['Horas trabajadas', reporte.resumen.total_horas_trabajadas],
+      ['Horas extras', reporte.resumen.jornada_configurada ? reporte.resumen.total_horas_extras : 'N/A'],
+      ['Días no laborables trabajados', reporte.resumen.jornada_configurada ? reporte.resumen.dias_no_laborables_trabajados : 'N/A'],
+      ['Ausencias registradas', reporte.resumen.ausencias_registradas],
+      ['Días con problemas', reporte.resumen.dias_con_problemas]
+    ];
+
+    // Hoja 2: Detalle
+    const detalleData = [
+      ['Fecha', 'Entrada', 'Salida', 'Horas Trabajadas', 'Horas Extras', 'Tipo', 'Observación']
+    ];
+
+    reporte.marcaciones_detalle.forEach(m => {
+      detalleData.push([
+        formatearFecha(m.fecha),
+        m.hora_entrada ? formatearHora(m.hora_entrada) : '-',
+        m.hora_salida ? formatearHora(m.hora_salida) : '-',
+        m.horas_trabajadas || '-',
+        m.horas_extras || '-',
+        m.tipo,
+        m.observacion || ''
+      ]);
+    });
+
+    // Crear workbook
+    const wb = XLSX.utils.book_new();
+
+    const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
+    wsResumen['!cols'] = [{ wch: 30 }, { wch: 40 }];
+    XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen');
+
+    const wsDetalle = XLSX.utils.aoa_to_sheet(detalleData);
+    wsDetalle['!cols'] = [{ wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 16 }, { wch: 12 }, { wch: 12 }, { wch: 40 }];
+    XLSX.utils.book_append_sheet(wb, wsDetalle, 'Detalle');
+
+    // Generar nombre de archivo
+    const nombreEmpleado = reporte.empleado.nombre_completo.replace(/\s+/g, '_');
+    const nombreArchivo = `Reporte_${nombreEmpleado}_${reporte.periodo.fecha_desde}_${reporte.periodo.fecha_hasta}.xlsx`;
+
+    // Descargar
+    XLSX.writeFile(wb, nombreArchivo);
+    mostrarNotificacion('Reporte exportado exitosamente');
+  };
+
   // Navegar con transición
   const handleVolver = () => {
     if (document.startViewTransition) {
@@ -307,14 +366,25 @@ function ReporteDetalle() {
                 )}
               </div>
             </div>
-            <button
-              onClick={cargarReporte}
-              disabled={loading}
-              className="btn-glass px-4 py-2 flex items-center gap-2"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Actualizar</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={exportarExcel}
+                disabled={loading || !reporte}
+                className="btn-glass px-4 py-2 flex items-center gap-2"
+                title="Exportar a Excel"
+              >
+                <Download className="w-4 h-4" />
+                <span className="hidden sm:inline">Exportar Excel</span>
+              </button>
+              <button
+                onClick={cargarReporte}
+                disabled={loading}
+                className="btn-glass px-4 py-2 flex items-center gap-2"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Actualizar</span>
+              </button>
+            </div>
           </div>
 
           {/* Info del empleado */}

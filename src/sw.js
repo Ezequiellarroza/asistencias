@@ -7,7 +7,7 @@
  */
 
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
-import { registerRoute, NavigationRoute } from 'workbox-routing';
+import { registerRoute } from 'workbox-routing';
 import { NetworkFirst, StaleWhileRevalidate, CacheFirst } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 
@@ -92,16 +92,25 @@ registerRoute(
   })
 );
 
-// Navegación - Fallback a index.html
-const navRoute = new NavigationRoute(
-  ({ request }) => {
-    return caches.match('/valle/index.html');
-  },
-  {
-    denylist: [/^\/api/]
+// Navegación - Network First con fallback a index.html
+registerRoute(
+  ({ request }) => request.mode === 'navigate',
+  async ({ request }) => {
+    try {
+      // Intentar red primero (el .htaccess redirige a index.html)
+      const response = await fetch(request);
+      return response;
+    } catch (error) {
+      // Si falla la red, buscar index.html en cache
+      const cachedResponse = await caches.match('/valle/index.html');
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+      // Si no hay cache, intentar fetch directo al index
+      return fetch('/valle/index.html');
+    }
   }
 );
-registerRoute(navRoute);
 
 // ============================================
 // NOTIFICACIONES PUSH

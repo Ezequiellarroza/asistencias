@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import useGeolocation from '../../hooks/useGeolocation';
 import marcacionService from '../../services/marcacionService';
 import ModalSeleccionOficina from '../../components/ui/ModalSeleccionOficina';
+import ConfirmModal from '../../components/ui/ConfirmModal';
 
 function Dashboard() {
   const [estado, setEstado] = useState(null);
@@ -18,6 +19,11 @@ function Dashboard() {
   // Estados para el modal de selección de oficina
   const [modalAbierto, setModalAbierto] = useState(false);
   const [tipoMarcacion, setTipoMarcacion] = useState(null); // 'entrada' o 'salida'
+
+  // Estados para el modal de confirmación preventivo
+  const [confirmModalAbierto, setConfirmModalAbierto] = useState(false);
+  const [mensajeConfirmacion, setMensajeConfirmacion] = useState('');
+  const [textoBotonConfirmar, setTextoBotonConfirmar] = useState('');
   
   const navigate = useNavigate();
   const { logout } = useAuth();
@@ -53,31 +59,55 @@ function Dashboard() {
     }
   };
 
+  // Variable trabajando calculada para usar en handleMarcar
+  const trabajando = estado?.estado_hoy?.trabajando_actualmente || false;
+
   const handleMarcar = async (tipo) => {
-  setSubmitting(true);
-  setError('');
-  setSuccess('');
+    setSubmitting(true);
+    setError('');
+    setSuccess('');
 
-  try {
-    // Intentar obtener ubicación, pero no bloquear si falla
     try {
-      await getLocation();
-    } catch (gpsErr) {
-      console.warn('No se pudo obtener GPS:', gpsErr.message);
-      // Continuar sin GPS - se generará alerta en el backend
+      // Intentar obtener ubicación, pero no bloquear si falla
+      try {
+        await getLocation();
+      } catch (gpsErr) {
+        console.warn('No se pudo obtener GPS:', gpsErr.message);
+        // Continuar sin GPS - se generará alerta en el backend
+      }
+
+      setTipoMarcacion(tipo);
+
+      // Verificar si necesita confirmación preventiva
+      if (tipo === 'entrada' && trabajando) {
+        // Ya tiene entrada sin salida
+        const horaEntrada = estado?.estado_hoy?.hora_entrada || 'hora desconocida';
+        setMensajeConfirmacion(`Ya tenés una entrada registrada a las ${horaEntrada}. ¿Estás seguro que querés registrar una nueva entrada?`);
+        setTextoBotonConfirmar('Sí, registrar entrada');
+        setConfirmModalAbierto(true);
+      } else if (tipo === 'salida' && !trabajando) {
+        // No tiene entrada registrada
+        setMensajeConfirmacion('No tenés entrada registrada hoy. ¿Estás seguro que querés registrar una salida?');
+        setTextoBotonConfirmar('Sí, registrar salida');
+        setConfirmModalAbierto(true);
+      } else {
+        // Flujo normal - abrir modal de oficina directamente
+        setModalAbierto(true);
+      }
+
+    } catch (err) {
+      console.error('Error inesperado:', err);
+      setError(err.message || 'Error inesperado');
+    } finally {
+      setSubmitting(false);
     }
+  };
 
-    // Abrir modal aunque no haya GPS
-    setTipoMarcacion(tipo);
-    setModalAbierto(true);
-
-  } catch (err) {
-    console.error('Error inesperado:', err);
-    setError(err.message || 'Error inesperado');
-  } finally {
-    setSubmitting(false);
-  }
-};
+  // Handler para cuando el usuario confirma la advertencia
+  const handleConfirmarAdvertencia = () => {
+    setConfirmModalAbierto(false);
+    setModalAbierto(true); // Continuar con el flujo normal
+  };
   const handleConfirmarMarcacion = async (oficinaId) => {
   setSubmitting(true);
   setModalAbierto(false);
@@ -146,8 +176,6 @@ function Dashboard() {
       </div>
     );
   }
-
-  const trabajando = estado?.estado_hoy?.trabajando_actualmente || false;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-green-50 to-amber-50 p-4">
@@ -297,6 +325,18 @@ function Dashboard() {
         latitud={location.latitud}
         longitud={location.longitud}
         onConfirmar={handleConfirmarMarcacion}
+      />
+
+      {/* Modal de Confirmación - Advertencia de marcación inconsistente */}
+      <ConfirmModal
+        isOpen={confirmModalAbierto}
+        onClose={() => setConfirmModalAbierto(false)}
+        onConfirm={handleConfirmarAdvertencia}
+        title="Confirmar marcación"
+        message={mensajeConfirmacion}
+        confirmText={textoBotonConfirmar}
+        cancelText="Cancelar"
+        type="warning"
       />
     </div>
   );
