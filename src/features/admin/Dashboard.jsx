@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { 
-  LogOut, 
-  Users, 
-  FileText, 
-  MapPin, 
-  Settings, 
+import {
+  LogOut,
+  Users,
+  FileText,
+  MapPin,
+  Settings,
   Clock,
   AlertTriangle,
   Loader2,
@@ -14,9 +14,11 @@ import {
   Bell,
   CheckSquare,
   Briefcase,
-  Home
+  Home,
+  Sparkles
 } from 'lucide-react';
 import adminService from '../../services/adminService';
+import NovedadesPanel from './components/NovedadesPanel';
 
 function AdminDashboard() {
   const { user, logout } = useAuth();
@@ -27,6 +29,7 @@ function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [novedadesOpen, setNovedadesOpen] = useState(false);
 
   // Cargar estadísticas
   const cargarEstadisticas = async () => {
@@ -107,16 +110,24 @@ function AdminDashboard() {
           </div>
           <div className="flex gap-2">
             <button
+              onClick={() => setNovedadesOpen(true)}
+              className="btn-glass px-4 py-2 flex items-center gap-2 text-amber-600"
+              title="Ver novedades"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span className="hidden sm:inline">Novedades</span>
+            </button>
+            <button
               onClick={handleRefresh}
               disabled={refreshing}
               className="btn-glass px-4 py-2 flex items-center gap-2 text-gray-600"
             >
               <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-              Actualizar
+              <span className="hidden sm:inline">Actualizar</span>
             </button>
             <button onClick={logout} className="btn-glass px-4 py-2 flex items-center gap-2 text-red-600">
               <LogOut className="w-4 h-4" />
-              Salir
+              <span className="hidden sm:inline">Salir</span>
             </button>
           </div>
         </div>
@@ -230,7 +241,7 @@ function AdminDashboard() {
   <h3 className="text-xl font-bold text-gray-800 mb-2">Marcación Manual</h3>
   <p className="text-sm text-gray-600">Registrar entradas, salidas y ausencias</p>
 </button>
-          <button 
+          <button
   onClick={() => handleNavigateWithTransition('/admin/configuracion')}
   className="glass-card p-8 hover:scale-105 transition-transform duration-200 text-left"
 >
@@ -240,6 +251,12 @@ function AdminDashboard() {
 </button>
         </div>
       </div>
+
+      {/* Panel de Novedades */}
+      <NovedadesPanel
+        isOpen={novedadesOpen}
+        onClose={() => setNovedadesOpen(false)}
+      />
     </div>
   );
 }

@@ -1018,20 +1018,41 @@ class AdminService {
   async eliminarFeriado(feriadoId) {
     try {
       const response = await api.delete(`/admin/feriados.php?id=${feriadoId}`);
-      
+
       if (response.success) {
         return response.data || { mensaje: 'Feriado eliminado' };
       }
-      
+
       throw new Error(response.message || response.mensaje || 'Error al eliminar feriado');
     } catch (error) {
       console.error('Error en eliminarFeriado:', error);
       throw error;
     }
   }
+
+  // ============================================
+  // MÉTODOS DE NOVEDADES
+  // ============================================
+
+  /**
+   * Obtener novedades del sistema (implementadas y planificadas)
+   * @returns {Promise<Object>} - Lista de novedades { implementado: [...], planificado: [...] }
+   */
+  async getNovedades() {
+    try {
+      const response = await api.get('/admin/novedades.php');
+
+      if (response.success && response.data) {
+        return response.data;
+      }
+
+      throw new Error(response.message || response.mensaje || 'Error al obtener novedades');
+    } catch (error) {
+      console.error('Error en getNovedades:', error);
+      throw error;
+    }
+  }
 }
-
-
 
 // Exportar instancia singleton
 const adminService = new AdminService();

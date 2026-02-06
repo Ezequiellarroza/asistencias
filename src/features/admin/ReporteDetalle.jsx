@@ -55,17 +55,7 @@ function ReporteDetalle() {
   const [oficinas, setOficinas] = useState([]);
   const [notificacion, setNotificacion] = useState(null);
 
-  // Cargar oficinas para el modal
-  const cargarOficinas = async () => {
-    try {
-      const data = await adminService.getOficinas(false);
-      setOficinas(data.oficinas || []);
-    } catch (err) {
-      console.error('Error al cargar oficinas:', err);
-    }
-  };
-
-  // Cargar reporte
+  // Cargar reporte (función para uso manual: botón actualizar, después de guardar marcación)
   const cargarReporte = async () => {
     if (!fechaDesde || !fechaHasta) {
       setError('Debe seleccionar un rango de fechas válido');
@@ -92,10 +82,78 @@ function ReporteDetalle() {
     }
   };
 
-  // Cargar al montar y al cambiar fechas
+  // Cargar oficinas solo al montar (no depende de empleado ni fechas)
   useEffect(() => {
-    cargarOficinas();
-    cargarReporte();
+    let cancelled = false;
+
+    const fetchOficinas = async () => {
+      try {
+        const data = await adminService.getOficinas(false);
+        if (!cancelled) {
+          setOficinas(data.oficinas || []);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Error al cargar oficinas:', err);
+        }
+      }
+    };
+
+    fetchOficinas();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Cargar reporte al cambiar empleado o fechas (con cancelación para evitar race conditions)
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchReporte = async () => {
+      if (!fechaDesde || !fechaHasta) {
+        setError('Debe seleccionar un rango de fechas válido');
+        return;
+      }
+
+      // Resetear estado al iniciar nueva carga
+      setLoading(true);
+      setError('');
+      setReporte(null); // Reset para evitar mostrar datos del empleado anterior
+
+      try {
+        const data = await adminService.getReporteEmpleado(empleadoId, fechaDesde, fechaHasta);
+
+        // Solo actualizar si no fue cancelado (evita race conditions)
+        if (!cancelled) {
+          setReporte(data);
+        }
+      } catch (err) {
+        // Solo manejar error si no fue cancelado
+        if (!cancelled) {
+          console.error('Error al cargar reporte:', err);
+          if (err.message === 'No autenticado') {
+            setError('Tu sesión ha expirado. Redirigiendo al login...');
+          } else if (err.message.includes('no encontrado')) {
+            setError('Empleado no encontrado');
+          } else {
+            setError(err.message || 'Error al cargar reporte');
+          }
+        }
+      } finally {
+        // Solo actualizar loading si no fue cancelado
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchReporte();
+
+    // Cleanup: marcar como cancelado si el efecto se re-ejecuta o el componente se desmonta
+    return () => {
+      cancelled = true;
+    };
   }, [empleadoId, fechaDesde, fechaHasta]);
 
   // Handler de cambio de fechas
@@ -668,18 +726,40 @@ function ReporteDetalle() {
 
                       {marcacion.tipo === 'completo' && (
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-sm">
-                          <div className="flex items-center gap-2 text-gray-700">
-                            <span className="font-medium">Entrada:</span>
-                            <span>{formatearHora(marcacion.hora_entrada)}</span>
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-2 text-gray-700">
+                              <span className="font-medium">Entrada:</span>
+                              <span>{formatearHora(marcacion.hora_entrada)}</span>
+                            </div>
+                            {marcacion.alertas_entrada?.some(a => a.tipo === 'gps_fuera_rango') && (
+                              <span className="text-xs text-red-600 flex items-center gap-1">
+                                <AlertTriangle className="w-3 h-3" />
+                                Fuera de rango
+                              </span>
+                            )}
+                            {marcacion.oficina_nombre_entrada && (
+                              <span className="text-xs text-gray-500">{marcacion.oficina_nombre_entrada}</span>
+                            )}
                           </div>
-                          <div className="flex items-center gap-2 text-gray-700">
-                            <span className="font-medium">Salida:</span>
-                            <span>
-                              {formatearHora(marcacion.hora_salida)}
-                              {marcacion.fecha_salida && marcacion.fecha_salida !== marcacion.fecha && 
-                                ` (${formatearFecha(marcacion.fecha_salida)})`
-                              }
-                            </span>
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-2 text-gray-700">
+                              <span className="font-medium">Salida:</span>
+                              <span>
+                                {formatearHora(marcacion.hora_salida)}
+                                {marcacion.fecha_salida && marcacion.fecha_salida !== marcacion.fecha &&
+                                  ` (${formatearFecha(marcacion.fecha_salida)})`
+                                }
+                              </span>
+                            </div>
+                            {marcacion.alertas_salida?.some(a => a.tipo === 'gps_fuera_rango') && (
+                              <span className="text-xs text-red-600 flex items-center gap-1">
+                                <AlertTriangle className="w-3 h-3" />
+                                Fuera de rango
+                              </span>
+                            )}
+                            {marcacion.oficina_nombre_salida && (
+                              <span className="text-xs text-gray-500">{marcacion.oficina_nombre_salida}</span>
+                            )}
                           </div>
                           <div className="flex items-center gap-2 text-emerald-700 font-semibold">
                             <Clock className="w-4 h-4" />
@@ -706,18 +786,48 @@ function ReporteDetalle() {
                       {marcacion.tipo === 'incompleto' && (
                         <div className="text-sm text-amber-700">
                           <span className="font-medium">{marcacion.observacion}</span>
-                          {marcacion.hora_entrada && (
-                            <span className="ml-2">Entrada: {formatearHora(marcacion.hora_entrada)}</span>
-                          )}
-                          {marcacion.hora_salida && (
-                            <span className="ml-2">Salida: {formatearHora(marcacion.hora_salida)}</span>
-                          )}
+                          <div className="flex flex-wrap gap-4 mt-1">
+                            {marcacion.hora_entrada && (
+                              <div className="flex flex-col">
+                                <span>Entrada: {formatearHora(marcacion.hora_entrada)}</span>
+                                {marcacion.alertas_entrada?.some(a => a.tipo === 'gps_fuera_rango') && (
+                                  <span className="text-xs text-red-600 flex items-center gap-1">
+                                    <AlertTriangle className="w-3 h-3" />
+                                    Fuera de rango
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            {marcacion.hora_salida && (
+                              <div className="flex flex-col">
+                                <span>Salida: {formatearHora(marcacion.hora_salida)}</span>
+                                {marcacion.alertas_salida?.some(a => a.tipo === 'gps_fuera_rango') && (
+                                  <span className="text-xs text-red-600 flex items-center gap-1">
+                                    <AlertTriangle className="w-3 h-3" />
+                                    Fuera de rango
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
 
                       {marcacion.tipo === 'turno_invalido' && (
                         <div className="text-sm text-red-700">
                           <span className="font-medium">{marcacion.observacion}</span>
+                          {marcacion.alertas_entrada?.some(a => a.tipo === 'gps_fuera_rango') && (
+                            <span className="ml-2 text-xs inline-flex items-center gap-1">
+                              <AlertTriangle className="w-3 h-3" />
+                              Entrada fuera de rango
+                            </span>
+                          )}
+                          {marcacion.alertas_salida?.some(a => a.tipo === 'gps_fuera_rango') && (
+                            <span className="ml-2 text-xs inline-flex items-center gap-1">
+                              <AlertTriangle className="w-3 h-3" />
+                              Salida fuera de rango
+                            </span>
+                          )}
                         </div>
                       )}
 
